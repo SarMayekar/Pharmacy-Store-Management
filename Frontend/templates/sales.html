@@ -1,0 +1,448 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Sales/Billing</h2>
+
+<form method="post" class="mb-4">
+
+  <!-- Invoice (readonly, auto-generated) -->
+  <label class="form-label mt-2">Invoice No.</label>
+  <input type="text" name="invoice_no" class="form-control mb-2" value="{{ invoice_no or '' }}" readonly>
+
+  <!-- Sale Date -->
+  <label class="form-label">Date</label>
+  <input type="date" name="sale_date" class="form-control mb-2" value="{{ sale_date or '' }}">
+
+  <!-- Patient Name -->
+  <label class="form-label mt-2">Patient Name</label>
+  <input type="text" name="patient_name" id="patient_name" list="patient_list" placeholder="Start typing or add new..." required
+         class="form-control mb-2" value="{{ patient_name or '' }}">
+  <datalist id="patient_list">
+    {% for patient in patients %}
+    <option value="{{ patient.name }}">
+    {% endfor %}
+  </datalist>
+
+  <!-- Patient Contact Number -->
+  <label class="form-label">Patient Contact Number</label>
+  <input type="text" name="patient_contact" id="patient_contact" placeholder="Optional" class="form-control mb-2" value="{{ patient_contact or '' }}">
+
+  <!-- Doctor Name -->
+  <label class="form-label mt-2">Doctor Name</label>
+  <input type="text" name="doctor_name" id="doctor_name" list="doctor_list" placeholder="Start typing or add new..." class="form-control mb-2"
+         value="{{ doctor_name or '' }}">
+  <datalist id="doctor_list">
+    {% for doctor in doctors %}
+    <option value="{{ doctor.name }}">
+    {% endfor %}
+  </datalist>
+
+  <!-- Doctor Contact Number -->
+  <label class="form-label">Doctor Contact Number</label>
+  <input type="text" name="doctor_contact" id="doctor_contact" placeholder="Optional" class="form-control mb-3" value="{{ doctor_contact or '' }}">
+
+  <hr>
+  <h4>Items</h4>
+  <div class="table-responsive">
+    <table class="table table-bordered align-middle text-center">
+      <thead>
+        <tr>
+          <th>Action</th>
+          <th>Medicine</th>
+          <th>Batch</th>
+          <th>Expiry</th>
+          <th>HSN</th>
+          <th>MRP</th>
+          <th>Qty</th>
+          <th>Rate</th>
+          <th>SGST %</th>
+          <th>CGST %</th>
+          <th>Discount %</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for i in range(rowcount) %}
+        <tr>
+          <td>
+            <button type="submit" name="delrow" value="{{ i }}" class="btn btn-sm btn-danger" title="Delete row">×</button>
+          </td>
+          <td>
+            <input type="text" name="items-{{ i }}-product" id="items-{{ i }}-product" list="medicine_list" placeholder="Type/select medicine" class="form-control"
+                   value="{{ items[i]['product'] if items|length > i else '' }}">
+            <datalist id="medicine_list">
+              {% for med in medicines %}
+              <option value="{{ med.name }}">
+              {% endfor %}
+            </datalist>
+          </td>
+          <td>
+            <input type="text" name="items-{{ i }}-batch_no" id="items-{{ i }}-batch_no" class="form-control" placeholder="Batch"
+                   value="{{ items[i]['batch_no'] if items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="date" name="items-{{ i }}-expiry_date" id="items-{{ i }}-expiry_date" class="form-control"
+                   value="{{ items[i]['expiry_date'] if items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="text" name="items-{{ i }}-hsn_code" id="items-{{ i }}-hsn_code" class="form-control" placeholder="HSN"
+                   value="{{ items[i]['hsn_code'] if items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" name="items-{{ i }}-mrp" id="items-{{ i }}-mrp" class="form-control" placeholder="MRP"
+                   value="{{ items[i]['mrp'] if items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="1" min="0" name="items-{{ i }}-quantity" class="form-control" placeholder="Qty"
+                   value="{{ items[i]['quantity'] if items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" name="items-{{ i }}-rate" class="form-control" placeholder="Rate"
+                   value="{{ items[i]['rate'] if items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" max="100" name="items-{{ i }}-sgst_percent" id="items-{{ i }}-sgst_percent" class="form-control" placeholder="SGST%"
+                   value="{{ items[i]['sgst_percent'] if items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" max="100" name="items-{{ i }}-cgst_percent" id="items-{{ i }}-cgst_percent" class="form-control" placeholder="CGST%"
+                   value="{{ items[i]['cgst_percent'] if items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" max="100" name="items-{{ i }}-discount_percent" class="form-control" placeholder="Discount%"
+                   value="{{ items[i]['discount_percent'] if items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" name="items-{{ i }}-amount" class="form-control" placeholder="Amount"
+                   value="{{ items[i]['amount'] if items|length > i else '' }}">
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <button type="submit" name="addrow" value="1" class="btn btn-secondary mb-3">Add Row</button>
+
+  <div class="row mb-3">
+    <div class="col-md-4 text-end">
+      <label class="form-label"><b>MRP Total</b></label>
+      <input type="number" step="0.01" min="0" name="grand_total_mrp" class="form-control d-inline-block" style="width:200px"
+             value="{{ grand_total_mrp if grand_total_mrp else '' }}">
+    </div>
+    <div class="col-md-4 text-end">
+      <label class="form-label"><b>Grand Total</b></label>
+      <input type="number" step="0.01" min="0" name="grand_total_actual" class="form-control d-inline-block" style="width:200px"
+             value="{{ grand_total_actual if grand_total_actual else '' }}">
+    </div>
+    <div class="col-md-4 text-end">
+      <label class="form-label"><b>Savings (MRP Total - Grand Total)</b></label>
+      <input type="number" step="0.01" min="0" name="savings_total" class="form-control d-inline-block" style="width:200px"
+             value="{{ savings_total if savings_total else '' }}">
+    </div>
+  </div>
+  <button type="submit" name="savesale" value="1" class="btn btn-primary mb-3" onclick="return validateForm()">Save Sale</button>
+</form>
+
+<!-- Sales History Table -->
+<h4>Sales History</h4>
+<table class="table table-bordered table-striped text-center">
+  <thead>
+    <tr>
+      <th>Invoice ID</th>
+      <th>Patient Name</th>
+      <th>Date</th>
+      <th>No. of Items</th>
+      <th>Amount Total</th>
+      <th>Print/View</th>
+      <th>Delete</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for sale in sales_history %}
+    <tr>
+      <td>{{ sale.invoice_no }}</td>
+      <td>{{ sale.patient_name or '' }}</td>
+      <td>{{ sale.sale_datetime }}</td>
+      <td>{{ sale.item_count }}</td>
+      <td>{{ "%.2f"|format(sale.total_amount) }}</td>
+      <td>
+        <a href="/bill/{{ sale.id }}" class="btn btn-sm btn-primary">Print/View</a>
+      </td>
+      <td>
+        <form method="post" class="d-inline" onsubmit="return confirm('Delete this sale?');">
+          <input type="hidden" name="delsale_id" value="{{ sale.id }}">
+          <button class="btn btn-sm btn-danger">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="text-muted">No sales yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if show_bill and bill_data %}
+<hr>
+<div id="bill-section">
+  <h3>Bill - Invoice #{{ bill_data.sale.invoice_no }}</h3>
+  <p><strong>Date:</strong> {{ bill_data.sale.sale_datetime }}</p>
+  <p><strong>Patient:</strong> {{ bill_data.sale.patient_name }}</p>
+  <table class="table table-bordered mt-3">
+    <thead>
+      <tr>
+        <th>Sr No</th>
+        <th>Item</th>
+        <th>Quantity</th>
+        <th>Price</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in bill_data['items'] %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ item.name }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ item.price }}</td>
+        <td>{{ item.amount }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p><strong>Total Amount: Rs {{ bill_data.sale.total_amount }}</strong></p>
+  <button onclick="window.print()" class="btn btn-success">Print / Download Bill</button>
+</div>
+
+{% endif %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    function toFloat(val) {
+        var num = parseFloat(val);
+        return isNaN(num) ? 0 : num;
+    }
+
+    function validateForm() {
+        let patientName = document.querySelector('[name="patient_name"]').value.trim();
+        if (!patientName) {
+            alert("Warning: Patient name is required.");
+            return false;
+        }
+
+        let rows = document.querySelectorAll('[name^="items-"][name$="-quantity"]');
+        if (rows.length === 0) {
+            alert("Warning: At least one item is required.");
+            return false;
+        }
+
+        let validItems = 0;
+        for (let i = 0; i < rows.length; i++) {
+            let product = document.querySelector(`[name="items-${i}-product"]`).value.trim();
+            let qty = document.querySelector(`[name="items-${i}-quantity"]`).value.trim();
+            let rate = document.querySelector(`[name="items-${i}-rate"]`).value.trim();
+
+            if (product && qty && rate) {
+                let qtyVal = toFloat(qty);
+                let rateVal = toFloat(rate);
+                if (qtyVal <= 0 || rateVal <= 0) {
+                    alert(`Warning: Item ${i+1}: Quantity and rate must be positive.`);
+                    return false;
+                }
+                validItems++;
+            } else if (product || qty || rate) {
+                alert(`Warning: Item ${i+1}: Incomplete item data.`);
+                return false;
+            }
+        }
+
+        if (validItems === 0) {
+            alert("Warning: At least one complete item is required.");
+            return false;
+        }
+
+        let grandTotal = document.querySelector('[name="grand_total_actual"]').value.trim();
+        if (!grandTotal) {
+            alert("Warning: Grand total is required.");
+            return false;
+        }
+
+        return true;
+    }
+
+    function recalcAll() {
+        let rows = document.querySelectorAll('[name^="items-"][name$="-quantity"]');
+        let total_mrp = 0, total_actual = 0;
+
+        rows.forEach((qtyInput, idx) => {
+            calcRow(idx);
+            let mrp = toFloat(document.querySelector(`[name="items-${idx}-mrp"]`).value);
+            let sgst = toFloat(document.querySelector(`[name="items-${idx}-sgst_percent"]`).value);
+            let cgst = toFloat(document.querySelector(`[name="items-${idx}-cgst_percent"]`).value);
+            let qty = toFloat(qtyInput.value);
+            let amount = toFloat(document.querySelector(`[name="items-${idx}-amount"]`).value);
+
+            let item_mrp_total = (mrp * qty) + ((mrp * qty) * sgst / 100) + ((mrp * qty) * cgst / 100);
+            total_mrp += item_mrp_total;
+            total_actual += amount;
+        });
+
+        let mrpInput = document.querySelector(`[name="grand_total_mrp"]`);
+        let actualInput = document.querySelector(`[name="grand_total_actual"]`);
+        let savingsInput = document.querySelector(`[name="savings_total"]`);
+
+        if (!mrpInput.dataset.locked || mrpInput.value.trim() === "")
+            mrpInput.value = total_mrp > 0 ? total_mrp.toFixed(2) : "";
+        if (!actualInput.dataset.locked || actualInput.value.trim() === "")
+            actualInput.value = total_actual > 0 ? total_actual.toFixed(2) : "";
+        if (!savingsInput.dataset.locked || savingsInput.value.trim() === "")
+            savingsInput.value = (total_mrp - total_actual > 0) ? (total_mrp - total_actual).toFixed(2) : "";
+    }
+
+    function calcRow(index) {
+        let qty = toFloat(document.querySelector(`[name="items-${index}-quantity"]`).value);
+        let rate = toFloat(document.querySelector(`[name="items-${index}-rate"]`).value);
+        let sgst = toFloat(document.querySelector(`[name="items-${index}-sgst_percent"]`).value);
+        let cgst = toFloat(document.querySelector(`[name="items-${index}-cgst_percent"]`).value);
+        let dis = toFloat(document.querySelector(`[name="items-${index}-discount_percent"]`).value);
+        let amountInput = document.querySelector(`[name="items-${index}-amount"]`);
+        // Excel-like override: if user has not typed manually or field is empty, auto-calc
+        if (!amountInput.dataset.locked || amountInput.value.trim() === "") {
+            let base = qty * rate;
+            let gst_sgst = base * sgst / 100;
+            let gst_cgst = base * cgst / 100;
+            let discount_amt = base * dis / 100;
+            let amount = base + gst_sgst + gst_cgst - discount_amt;
+            amountInput.value = amount > 0 ? amount.toFixed(2) : "";
+        }
+    }
+
+    function attachRowListeners(idx) {
+        ['quantity', 'rate', 'sgst_percent', 'cgst_percent', 'discount_percent', 'mrp'].forEach(field => {
+            let el = document.querySelector(`[name="items-${idx}-${field}"]`);
+            if (el) el.addEventListener("input", function () {
+                calcRow(idx);
+                recalcAll();
+            });
+        });
+        // Manual override for amount
+        let amount = document.querySelector(`[name="items-${idx}-amount"]`);
+        if (amount) {
+            amount.addEventListener("input", function () {
+                amount.dataset.locked = (amount.value.trim() !== "");
+                recalcAll();
+            });
+        }
+    }
+
+    function attachTotalListeners() {
+        ['grand_total_mrp', 'grand_total_actual', 'savings_total'].forEach(field => {
+            let el = document.querySelector(`[name="${field}"]`);
+            if (el) {
+                el.addEventListener("input", function () {
+                    el.dataset.locked = (el.value.trim() !== "");
+                });
+            }
+        });
+    }
+
+    // Attach to all current rows
+    let rows = document.querySelectorAll('[name^="items-"][name$="-quantity"]');
+    for (let i = 0; i < rows.length; i++)
+        attachRowListeners(i);
+    attachTotalListeners();
+
+    // Initial population
+    recalcAll();
+
+    // Autofill for patient name
+    document.getElementById('patient_name').addEventListener('input', function() {
+        const patientName = this.value.trim();
+        if (patientName) {
+            fetch(`/api/patient/${encodeURIComponent(patientName)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.contact_number) {
+                        document.getElementById('patient_contact').value = data.contact_number;
+                    }
+                })
+                .catch(error => console.error('Error fetching patient data:', error));
+        }
+    });
+
+    // Autofill for doctor name
+    document.getElementById('doctor_name').addEventListener('input', function() {
+        const doctorName = this.value.trim();
+        if (doctorName) {
+            fetch(`/api/doctor/${encodeURIComponent(doctorName)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.contact_number) {
+                        document.getElementById('doctor_contact').value = data.contact_number;
+                    }
+                })
+                .catch(error => console.error('Error fetching doctor data:', error));
+        }
+    });
+
+    // Autofill for medicine details
+    document.addEventListener('input', function(event) {
+        if (event.target.matches('[id^="items-"][id$="-product"]')) {
+            const productInput = event.target;
+            const rowIndex = productInput.id.match(/items-(\d+)-product/)[1];
+            const medicineName = productInput.value.trim();
+            if (medicineName) {
+                fetch(`/api/medicine/${encodeURIComponent(medicineName)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.length > 0) {
+                            if (data.length === 1) {
+                                // Single batch: autofill directly
+                                const med = data[0];
+                                fillMedicineFields(rowIndex, med);
+                            } else {
+                                // Multiple batches: replace input with select dropdown
+                                const batchInput = document.getElementById(`items-${rowIndex}-batch_no`);
+                                const select = document.createElement('select');
+                                select.id = batchInput.id;
+                                select.name = batchInput.name;
+                                select.className = batchInput.className;
+                                select.innerHTML = '<option value="">Select Batch</option>' +
+                                    data.map(med => `<option value="${med.batch_no}" data-med='${JSON.stringify(med)}'>${med.batch_no} (Expiry: ${med.expiry_date})</option>`).join('');
+                                batchInput.parentNode.replaceChild(select, batchInput);
+                                // Auto-select first batch and fill fields
+                                const firstMed = data[0];
+                                select.value = firstMed.batch_no;
+                                fillMedicineFields(rowIndex, firstMed);
+                                // Add event listener for batch selection
+                                select.addEventListener('change', function() {
+                                    const selectedOption = this.options[this.selectedIndex];
+                                    if (selectedOption.value) {
+                                        const med = JSON.parse(selectedOption.getAttribute('data-med'));
+                                        fillMedicineFields(rowIndex, med);
+                                    }
+                                });
+                            }
+                        }
+                    })
+                    .catch(error => console.error('Error fetching medicine data:', error));
+            }
+        }
+    });
+
+    function fillMedicineFields(rowIndex, med) {
+        if (med.batch_no) document.getElementById(`items-${rowIndex}-batch_no`).value = med.batch_no;
+        if (med.expiry_date) document.getElementById(`items-${rowIndex}-expiry_date`).value = med.expiry_date;
+        if (med.hsn_code) document.getElementById(`items-${rowIndex}-hsn_code`).value = med.hsn_code;
+        if (med.mrp) document.getElementById(`items-${rowIndex}-mrp`).value = med.mrp;
+        if (med.sgst_percent) document.getElementById(`items-${rowIndex}-sgst_percent`).value = med.sgst_percent;
+        if (med.cgst_percent) document.getElementById(`items-${rowIndex}-cgst_percent`).value = med.cgst_percent;
+        // Recalculate after autofill
+        calcRow(rowIndex);
+        recalcAll();
+    }
+
+    // Also recalc on page changes (optional, e.g. after adding rows via POST)
+});
+</script>
+
+{% endblock %}

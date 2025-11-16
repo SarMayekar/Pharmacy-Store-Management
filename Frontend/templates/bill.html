@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Bill - Invoice #{{ sale.invoice_no }}</h2>
+<p><strong>Date:</strong> {{ sale.sale_datetime }}</p>
+<p><strong>Patient:</strong> {{ sale.patient_name or 'N/A' }}</p>
+<p><strong>Doctor:</strong> {{ sale.doctor_name or 'N/A' }}</p>
+
+<table class="table table-bordered mt-3">
+  <thead>
+    <tr>
+      <th>Sr No</th>
+      <th>Item</th>
+      <th>Batch</th>
+      <th>Expiry</th>
+      <th>HSN</th>
+      <th>MRP</th>
+      <th>Qty</th>
+      <th>Rate</th>
+      <th>SGST %</th>
+      <th>CGST %</th>
+      <th>Discount %</th>
+      <th>Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in items %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td>{{ item.name }}</td>
+      <td>{{ item.batch_no or '' }}</td>
+      <td>{{ item.expiry_date or '' }}</td>
+      <td>{{ item.hsn_code or '' }}</td>
+      <td>{{ "%.2f"|format(item.mrp or 0) }}</td>
+      <td>{{ item.quantity }}</td>
+      <td>{{ "%.2f"|format(item.price or 0) }}</td>
+      <td>{{ "%.2f"|format(item.sgst_percent or 0) }}</td>
+      <td>{{ "%.2f"|format(item.cgst_percent or 0) }}</td>
+      <td>{{ "%.2f"|format(item.discount_percent or 0) }}</td>
+      <td>{{ "%.2f"|format(item.amount or 0) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<p><strong>MRP Total: Rs {{ "%.2f"|format(mrp_total or 0) }}</strong></p>
+<p><strong>Total Amount: Rs {{ "%.2f"|format(sale.total_amount or 0) }}</strong></p>
+<p><strong>Savings: Rs {{ "%.2f"|format(savings or 0) }}</strong></p>
+
+<button onclick="window.print()" class="btn btn-primary mt-3">Print / Download</button>
+{% endblock %}

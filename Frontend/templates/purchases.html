@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Purchases</h2>
+<form method="post" class="mb-4">
+  <input type="hidden" name="rowcount" value="{{ rowcount }}">
+
+  <label class="form-label">Invoice No.</label>
+  <input type="text" name="invoice_no" placeholder="Invoice No" required class="form-control mb-2" value="{{ invoice_no or '' }}">
+
+  <label class="form-label">Distributor</label>
+  <input type="text" name="distributor_name" list="distributor_list" placeholder="Distributor" required class="form-control mb-2" value="{{ distributor_name or '' }}" id="distributor_name">
+  <datalist id="distributor_list">
+    {% for dist in distributors %}
+      <option value="{{ dist.name }}">
+    {% endfor %}
+  </datalist>
+
+  <!-- Distributor Contact Number -->
+  <label class="form-label">Distributor Contact Number</label>
+  <input type="text" name="distributor_contact" placeholder="Optional" class="form-control mb-2" value="{{ distributor_contact or '' }}" id="distributor_contact">
+
+  <label class="form-label">Trade Type</label>
+  <select name="trade_type" class="form-select mb-2" id="trade_type">
+    <option value="">--</option>
+    <option value="Retail" {% if trade_type == 'Retail' %}selected{% endif %}>Retail</option>
+    <option value="Wholesale" {% if trade_type == 'Wholesale' %}selected{% endif %}>Wholesale</option>
+  </select>
+
+  <label class="form-label">Date</label>
+  <input type="date" name="purchase_date" class="form-control mb-3" value="{{ purchase_date or '' }}">
+
+  <hr>
+  <h4>Items</h4>
+  <div>
+    <div class="row fw-bold text-center mb-1">
+      <div class="col-auto">Action</div>
+      <div class="col">Medicine</div>
+      <div class="col">Batch</div>
+      <div class="col">Expiry</div>
+      <div class="col">HSN</div>
+      <div class="col">MRP</div>
+      <div class="col">Qty</div>
+      <div class="col">Rate</div>
+      <div class="col">SGST %</div>
+      <div class="col">CGST %</div>
+      <div class="col">Discount %</div>
+      <div class="col">Amount</div>
+    </div>
+    {% for i in range(rowcount) %}
+    <div class="row g-2 align-items-end mb-2">
+      <div class="col-auto">
+        <button type="submit" name="delrow" value="{{ i }}" class="btn btn-sm btn-danger" title="Delete row">×</button>
+      </div>
+      <div class="col">
+        <input type="text" name="items-{{i}}-product" list="medicine_list" placeholder="Type/select medicine" class="form-control"
+               value="{{ items[i]['product'] if items|length > i else '' }}">
+        <datalist id="medicine_list">
+          {% for med in medicines %}
+          <option value="{{ med.name }}">
+          {% endfor %}
+        </datalist>
+      </div>
+      <div class="col"><input type="text" name="items-{{i}}-batch_no" placeholder="Batch" class="form-control"
+        value="{{ items[i]['batch_no'] if items|length > i else '' }}"></div>
+      <div class="col"><input type="date" name="items-{{i}}-expiry_date" class="form-control"
+        value="{{ items[i]['expiry_date'] if items|length > i else '' }}"></div>
+      <div class="col"><input type="text" name="items-{{i}}-hsn_code" placeholder="HSN" class="form-control"
+        value="{{ items[i]['hsn_code'] if items|length > i else '' }}"></div>
+      <div class="col"><input type="number" step="0.01" name="items-{{i}}-mrp" placeholder="MRP" class="form-control"
+        value="{{ items[i]['mrp'] if items|length > i else '' }}"></div>
+      <div class="col"><input type="number" name="items-{{i}}-quantity" placeholder="Qty" class="form-control"
+        value="{{ items[i]['quantity'] if items|length > i else '' }}"></div>
+      <div class="col"><input type="number" step="0.01" name="items-{{i}}-rate" placeholder="Rate" class="form-control"
+        value="{{ items[i]['rate'] if items|length > i else '' }}"></div>
+      <div class="col"><input type="number" step="0.01" name="items-{{i}}-sgst_percent" placeholder="SGST%" class="form-control"
+        value="{{ items[i]['sgst_percent'] if items|length > i else '' }}"></div>
+      <div class="col"><input type="number" step="0.01" name="items-{{i}}-cgst_percent" placeholder="CGST%" class="form-control"
+        value="{{ items[i]['cgst_percent'] if items|length > i else '' }}"></div>
+      <div class="col"><input type="number" step="0.01" name="items-{{i}}-discount_percent" placeholder="Discount%" class="form-control"
+        value="{{ items[i]['discount_percent'] if items|length > i else '' }}"></div>
+      <div class="col"><input type="number" step="0.01" name="items-{{i}}-amount" placeholder="Amount" class="form-control"
+        value="{{ items[i]['amount'] if items|length > i else '' }}"></div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="row mb-3">
+    <div class="col text-end">
+      <label for="grand_total" class="form-label"><b>Grand Total (Rs):</b></label>
+      <input type="number" step="0.01" name="grand_total" id="grand_total" class="form-control d-inline-block" style="width:200px"
+      value="{{ grand_total if grand_total else '' }}">
+    </div>
+  </div>
+  <button type="submit" name="addrow" value="1" class="btn btn-secondary mb-2">Add Row</button>
+  <button type="submit" name="savepurchase" value="1" class="btn btn-primary mb-2" onclick="return validateForm()">Save Purchase</button>
+</form>
+<hr>
+<h4>Purchase Records</h4>
+<table class="table table-bordered table-striped text-center">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Invoice</th>
+      <th>Distributor</th>
+      <th>Trade</th>
+      <th>Date</th>
+      <th>Total Amount</th>
+      <th>View</th>
+      <th>Delete</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for purchase in purchases_history %}
+    <tr>
+      <td>{{purchase.id}}</td>
+      <td>{{purchase.invoice_no}}</td>
+      <td>{{purchase.distributor_name}}</td>
+      <td>{{purchase.trade_type}}</td>
+      <td>{{purchase.purchase_date}}</td>
+      <td>{{"%.2f"|format(purchase.total_amount)}}</td>
+      <td>
+        <form method="post" class="d-inline">
+          <input type="hidden" name="showdetail_id" value="{{purchase.id}}">
+          <button class="btn btn-sm btn-primary">View</button>
+        </form>
+      </td>
+      <td>
+        <form method="post" class="d-inline" onsubmit="return confirm('Delete this purchase?');">
+          <input type="hidden" name="delpurchase_id" value="{{purchase.id}}">
+          <button class="btn btn-sm btn-danger">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="text-muted">No purchases yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if show_detail and purchase_detail %}
+<hr>
+<div id="purchase-detail-section">
+  <h3>Purchase #{{ purchase_detail.purchase.invoice_no }} | {{ purchase_detail.purchase.distributor_name }}</h3>
+  <p><b>Date:</b> {{ purchase_detail.purchase.purchase_date }} | <b>Trade Type:</b> {{ purchase_detail.purchase.trade_type }}</p>
+  <table class="table table-bordered mt-3">
+    <thead>
+      <tr>
+        <th>Sr No</th>
+        <th>Medicine</th>
+        <th>Batch</th>
+        <th>Expiry</th>
+        <th>Qty</th>
+        <th>Rate</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for idx, item in enumerate(purchase_detail['items'], 1) %}
+      <tr>
+        <td>{{ idx }}</td>
+        <td>{{ item.name }}</td>
+        <td>{{ item.batch_no }}</td>
+        <td>{{ item.expiry_date }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ item.rate }}</td>
+        <td>{{ item.amount }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p><strong>Total Amount: Rs {{ purchase_detail.purchase.total_amount }}</strong></p>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    function toFloat(val) {
+        var num = parseFloat(val); return isNaN(num) ? 0 : num;
+    }
+    function rowCount() {
+        return document.querySelectorAll(`input[name^="items-"][name$="-quantity"]`).length;
+    }
+    function calcRow(i) {
+        let qty = toFloat(document.querySelector(`[name="items-${i}-quantity"]`).value);
+        let rate = toFloat(document.querySelector(`[name="items-${i}-rate"]`).value);
+        let sgst = toFloat(document.querySelector(`[name="items-${i}-sgst_percent"]`).value);
+        let cgst = toFloat(document.querySelector(`[name="items-${i}-cgst_percent"]`).value);
+        let dis = toFloat(document.querySelector(`[name="items-${i}-discount_percent"]`).value);
+        let amountInput = document.querySelector(`[name="items-${i}-amount"]`);
+        if (!amountInput.dataset.locked || amountInput.value.trim() === "") {
+            let base = qty * rate;
+            let gst_sgst = base * sgst / 100;
+            let gst_cgst = base * cgst / 100;
+            let discount_amt = base * dis / 100;
+            let amount = base + gst_sgst + gst_cgst - discount_amt;
+            amountInput.value = amount > 0 ? amount.toFixed(2) : "";
+        }
+    }
+    function recalcAll() {
+        let rows = rowCount();
+        let total_actual = 0;
+        for (let i = 0; i < rows; i++) {
+            calcRow(i);
+            let amount = toFloat(document.querySelector(`[name="items-${i}-amount"]`).value);
+            total_actual += amount;
+        }
+        let grandInput = document.querySelector(`[name="grand_total"]`);
+        if (!grandInput.dataset.locked || grandInput.value.trim() === "")
+            grandInput.value = total_actual > 0 ? total_actual.toFixed(2) : "";
+    }
+    function attachRowListeners(i) {
+        ['quantity', 'rate', 'sgst_percent', 'cgst_percent', 'discount_percent'].forEach(field => {
+            let el = document.querySelector(`[name="items-${i}-${field}"]`);
+            if (el) el.addEventListener("input", function () {
+                calcRow(i); recalcAll();
+            });
+        });
+        let amount = document.querySelector(`[name="items-${i}-amount"]`);
+        if (amount) {
+            amount.addEventListener("input", function () {
+                amount.dataset.locked = (amount.value.trim() !== "");
+                recalcAll();
+            });
+        }
+    }
+    function attachTotalListeners() {
+        let grandInput = document.querySelector(`[name="grand_total"]`);
+        if (grandInput) {
+            grandInput.addEventListener("input", function () {
+                grandInput.dataset.locked = (grandInput.value.trim() !== "");
+            });
+        }
+    }
+    let rows = rowCount();
+    for (let i = 0; i < rows; i++) attachRowListeners(i);
+    attachTotalListeners();
+    recalcAll();
+
+    function validateForm() {
+        let invoiceNo = document.querySelector('[name="invoice_no"]').value.trim();
+        if (!invoiceNo) {
+            alert("Warning: Invoice number is required.");
+            return false;
+        }
+
+        let distributorName = document.querySelector('[name="distributor_name"]').value.trim();
+        if (!distributorName) {
+            alert("Warning: Distributor name is required.");
+            return false;
+        }
+
+        let rows = document.querySelectorAll(`input[name^="items-"][name$="-quantity"]`);
+        if (rows.length === 0) {
+            alert("Warning: At least one item is required.");
+            return false;
+        }
+
+        let validItems = 0;
+        for (let i = 0; i < rows.length; i++) {
+            let product = document.querySelector(`[name="items-${i}-product"]`).value.trim();
+            let qty = document.querySelector(`[name="items-${i}-quantity"]`).value.trim();
+            let rate = document.querySelector(`[name="items-${i}-rate"]`).value.trim();
+
+            if (product && qty && rate) {
+                let qtyVal = toFloat(qty);
+                let rateVal = toFloat(rate);
+                if (qtyVal <= 0 || rateVal <= 0) {
+                    alert(`Warning: Item ${i+1}: Quantity and rate must be positive.`);
+                    return false;
+                }
+                validItems++;
+            } else if (product || qty || rate) {
+                alert(`Warning: Item ${i+1}: Incomplete item data.`);
+                return false;
+            }
+        }
+
+        if (validItems === 0) {
+            alert("Warning: At least one complete item is required.");
+            return false;
+        }
+
+        let grandTotal = document.querySelector('[name="grand_total"]').value.trim();
+        if (!grandTotal) {
+            alert("Warning: Grand total is required.");
+            return false;
+        }
+
+        return true;
+    }
+
+    // Autofill distributor details
+    document.getElementById('distributor_name').addEventListener('input', function() {
+        let name = this.value.trim();
+        if (name) {
+            fetch(`/api/distributor/${encodeURIComponent(name)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.contact_number) {
+                        document.getElementById('distributor_contact').value = data.contact_number;
+                    }
+                    if (data.trade_type) {
+                        document.getElementById('trade_type').value = data.trade_type;
+                    }
+                })
+                .catch(error => console.error('Error fetching distributor details:', error));
+        }
+    });
+});
+</script>
+{% endblock %}

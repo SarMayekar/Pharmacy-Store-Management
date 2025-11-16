@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Medicines Inventory</h2>
+
+<form method="post" class="mb-4">
+  <div class="row g-2">
+    <div class="col"><input type="text" class="form-control" name="name" placeholder="Name" required></div>
+    <div class="col"><input type="text" class="form-control" name="hsn_code" placeholder="HSN"></div>
+    <div class="col"><input type="text" class="form-control" name="batch_no" placeholder="Batch"></div>
+    <div class="col"><input type="date" class="form-control" name="expiry_date" placeholder="Expiry"></div>
+    <div class="col"><input type="number" step="0.01" class="form-control" name="mrp" placeholder="MRP"></div>
+    <div class="col"><input type="number" step="0.01" class="form-control" name="price" placeholder="Sale Rate"></div>
+    <div class="col"><input type="number" step="0.01" class="form-control" name="purchase_price" placeholder="Purchase Rate"></div>
+    <div class="col"><input type="number" step="1" class="form-control" name="stock_qty" placeholder="Qty"></div>
+    <div class="col"><input type="number" step="0.01" class="form-control" name="sgst_percent" placeholder="SGST %"></div>
+    <div class="col"><input type="number" step="0.01" class="form-control" name="cgst_percent" placeholder="CGST %"></div>
+    <div class="col"><input type="text" class="form-control" name="supplier_name" placeholder="Supplier"></div>
+    <div class="col"><input type="text" class="form-control" name="supplier_contact" placeholder="Supplier Contact"></div>
+    <div class="col"><button type="submit" name="addmedicine" value="1" class="btn btn-success w-100" onclick="return validateForm()">Add</button></div>
+  </div>
+</form>
+
+<table class="table table-bordered table-striped text-center">
+  <thead>
+    <tr>
+      <th>ID</th><th>Name</th><th>HSN</th><th>Batch</th><th>Expiry</th>
+      <th>MRP</th><th>Sale&nbsp;Rate</th><th>Purchase&nbsp;Rate</th><th>Qty</th>
+      <th>SGST%</th><th>CGST%</th>
+      <th>Supplier</th><th>Supplier&nbsp;Contact</th>
+      <th>Sales</th><th>Purchases</th><th>Delete</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for med in medicines %}
+    <tr>
+      <td>{{ med.id }}</td>
+      <td>{{ med.name }}</td>
+      <td>{{ med.hsn_code }}</td>
+      <td>{{ med.batch_no }}</td>
+      <td>{{ med.expiry_date }}</td>
+      <td>{{ "%.2f"|format(med.mrp or 0) }}</td>
+      <td>{{ "%.2f"|format(med.price or 0) }}</td>
+      <td>{{ "%.2f"|format(med.purchase_price or 0) }}</td>
+      <td {% if med.stock_qty < 0 %}class="table-danger"{% endif %}><b>{{ med.stock_qty }}</b></td>
+      <td>{{ "%.2f"|format(med.sgst_percent or 0) }}</td>
+      <td>{{ "%.2f"|format(med.cgst_percent or 0) }}</td>
+      <td>{{ med.supplier_name }}</td>
+      <td>{{ med.supplier_contact }}</td>
+      <td>
+        <form method="post" class="d-inline">
+          <input type="hidden" name="view_sales_id" value="{{ med.id }}">
+          <button class="btn btn-sm btn-info">Sales</button>
+        </form>
+      </td>
+      <td>
+        <form method="post" class="d-inline">
+          <input type="hidden" name="view_purchases_id" value="{{ med.id }}">
+          <button class="btn btn-sm btn-primary">Purchases</button>
+        </form>
+      </td>
+      <td>
+        <form method="post" class="d-inline" onsubmit="return confirm('Delete this medicine?');">
+          <input type="hidden" name="delmedicine_id" value="{{ med.id }}">
+          <button class="btn btn-sm btn-danger">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="16" class="text-muted">No medicines yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if show_sales and medicine_detail %}
+<hr>
+<h4>Sales History for {{ medicine_detail.name }} - Batch {{ medicine_detail.batch_no }}, Exp: {{ medicine_detail.expiry_date }}</h4>
+<table class="table table-bordered table-striped text-center">
+  <thead>
+    <tr><th>Sale ID</th><th>Invoice</th><th>Date</th><th>Patient</th><th>Qty</th><th>Amount</th><th>View</th></tr>
+  </thead>
+  <tbody>
+    {% for s in sales_history %}
+    <tr>
+      <td>{{ s.id }}</td>
+      <td>{{ s.invoice_no }}</td>
+      <td>{{ s.sale_date }}</td>
+      <td>{{ s.patient_name or "" }}</td>
+      <td>{{ s.quantity }}</td>
+      <td>{{ s.amount }}</td>
+      <td><a href="/bill/{{ s.id }}" class="btn btn-sm btn-primary">View</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="text-muted">No sales for this medicine entry.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if show_purchases and medicine_detail %}
+<hr>
+<h4>Purchase History for {{ medicine_detail.name }} - Batch {{ medicine_detail.batch_no }}, Exp: {{ medicine_detail.expiry_date }}</h4>
+<table class="table table-bordered table-striped text-center">
+  <thead>
+    <tr><th>Invoice</th><th>Date</th><th>Distributor</th><th>Qty</th><th>Amount</th></tr>
+  </thead>
+  <tbody>
+    {% for p in purchases_history %}
+    <tr>
+      <td>{{ p.invoice_no }}</td>
+      <td>{{ p.purchase_date }}</td>
+      <td>{{ p.distributor_name or "" }}</td>
+      <td>{{ p.quantity }}</td>
+      <td>{{ p.amount }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="text-muted">No purchases for this medicine entry.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<script>
+function validateForm() {
+    let name = document.querySelector('[name="name"]').value.trim();
+    if (!name) {
+        alert("Warning: Medicine name is required.");
+        return false;
+    }
+    return true;
+}
+</script>
+
+{% endblock %}

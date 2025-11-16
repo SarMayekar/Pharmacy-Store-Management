@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Distributors{% endblock %}
+{% block content %}
+<h2>Distributors</h2>
+
+<form method="post" class="mb-4">
+  {% if editing_distributor %}
+    <input type="hidden" name="editdistributor_id" value="{{ editing_distributor.id }}">
+  {% endif %}
+  <div class="mb-3">
+    <input type="text" name="name" placeholder="Distributor Name" class="form-control" required value="{{ editing_distributor.name if editing_distributor else '' }}">
+  </div>
+  <div class="mb-3">
+    <input type="text" name="contact_number" placeholder="Contact Number" class="form-control" value="{{ editing_distributor.contact_number if editing_distributor else '' }}">
+  </div>
+  <div class="mb-3">
+    <select name="trade_type" class="form-select">
+      <option value="Retail" {% if editing_distributor and editing_distributor.trade_type == 'Retail' %}selected{% endif %}>Retail</option>
+      <option value="Wholesale" {% if editing_distributor and editing_distributor.trade_type == 'Wholesale' %}selected{% endif %}>Wholesale</option>
+    </select>
+  </div>
+  <button type="submit" name="{{ 'editdistributor' if editing_distributor else 'adddistributor' }}" value="1" class="btn btn-primary mb-3" onclick="return validateForm()">
+    {{ 'Update Distributor' if editing_distributor else 'Add Distributor' }}
+  </button>
+  {% if editing_distributor %}
+  <a href="{{ url_for('distributors_view') }}" class="btn btn-secondary mb-3 ms-2">Cancel Edit</a>
+  {% endif %}
+</form>
+
+<table class="table table-bordered table-striped text-center">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Contact Number</th>
+      <th>Type</th>
+      <th>Edit</th>
+      <th>Purchase History</th>
+      <th>Delete</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for distributor in distributors %}
+    <tr>
+      <td>{{ distributor.id }}</td>
+      <td>{{ distributor.name }}</td>
+      <td>{{ distributor.contact_number }}</td>
+      <td>{{ distributor.trade_type }}</td>
+      <td>
+        <form method="post" class="d-inline">
+          <input type="hidden" name="startedit_id" value="{{ distributor.id }}">
+          <button type="submit" class="btn btn-sm btn-warning">Edit</button>
+        </form>
+      </td>
+      <td>
+        <form method="post" class="d-inline">
+          <input type="hidden" name="viewpurchases_id" value="{{ distributor.id }}">
+          <button type="submit" class="btn btn-sm btn-info">View</button>
+        </form>
+      </td>
+      <td>
+        <form method="post" class="d-inline" onsubmit="return confirm('Delete this distributor?');">
+          <input type="hidden" name="deldistributor_id" value="{{ distributor.id }}">
+          <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="text-muted">No distributors found.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if show_history and distributor_detail %}
+<hr>
+<h4>Purchase History for {{ distributor_detail.name }}</h4>
+<table class="table table-bordered table-striped text-center">
+  <thead>
+    <tr>
+      <th>Invoice No</th>
+      <th>Date</th>
+      <th>Total Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for purchase in purchase_history %}
+    <tr>
+      <td>{{ purchase.invoice_no }}</td>
+      <td>{{ purchase.purchase_date }}</td>
+      <td>{{ "%.2f"|format(purchase.total_amount or 0) }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3" class="text-muted">No purchases found for this distributor.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<script>
+function validateForm() {
+    let name = document.querySelector('[name="name"]').value.trim();
+    if (!name) {
+        alert("Warning: Distributor name is required.");
+        return false;
+    }
+    return true;
+}
+</script>
+
+{% endblock %}

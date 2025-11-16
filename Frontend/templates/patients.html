@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Patients{% endblock %}
+{% block content %}
+<h2>Patients</h2>
+
+<!-- Add or Edit Patient Form -->
+<form method="post" class="mb-4">
+  {% if editing_patient %}
+    <input type="hidden" name="editpatient_id" value="{{ editing_patient.id }}">
+  {% endif %}
+  <div class="mb-3">
+    <input type="text" name="name" placeholder="Patient Name" class="form-control" required value="{{ editing_patient.name if editing_patient else '' }}">
+  </div>
+  <div class="mb-3">
+    <input type="text" name="contact_number" placeholder="Contact Number" class="form-control" value="{{ editing_patient.contact_number if editing_patient else '' }}">
+  </div>
+  <div class="mb-3">
+    <textarea name="medical_history_notes" placeholder="Medical History Notes" class="form-control" rows="3">{{ editing_patient.medical_history_notes if editing_patient else '' }}</textarea>
+  </div>
+  <button type="submit" name="{{ 'editpatient' if editing_patient else 'addpatient' }}" value="1" class="btn btn-primary mb-3" onclick="return validateForm()">
+    {{ 'Update Patient' if editing_patient else 'Add Patient' }}
+  </button>
+  {% if editing_patient %}
+  <a href="{{ url_for('patients_view') }}" class="btn btn-secondary mb-3 ms-2">Cancel Edit</a>
+  {% endif %}
+</form>
+
+<table class="table table-bordered table-striped text-center">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Contact Number</th>
+      <th>Medical History</th>
+      <th>Edit</th>
+      <th>Records</th>
+      <th>Delete</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for patient in patients %}
+    <tr>
+      <td>{{ patient.id }}</td>
+      <td>{{ patient.name }}</td>
+      <td>{{ patient.contact_number }}</td>
+      <td>{{ patient.medical_history_notes }}</td>
+      <td>
+        <form method="post" class="d-inline">
+          <input type="hidden" name="startedit_id" value="{{ patient.id }}">
+          <button type="submit" class="btn btn-sm btn-warning">Edit</button>
+        </form>
+      </td>
+      <td>
+        <form method="post" class="d-inline">
+          <input type="hidden" name="viewpurchase_id" value="{{ patient.id }}">
+          <button type="submit" class="btn btn-sm btn-info">Records</button>
+        </form>
+      </td>
+        <td>
+        <form method="post" class="d-inline" onsubmit="return confirm('Delete this patient?');">
+          <input type="hidden" name="delpatient_id" value="{{ patient.id }}">
+          <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="text-muted">No patients found.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if show_history %}
+<hr>
+<h4>Records for {{ editing_patient.name if editing_patient else '' }}</h4>
+<table class="table table-bordered table-striped text-center">
+  <thead>
+    <tr>
+      <th>Sale ID</th>
+      <th>Invoice No</th>
+      <th>Date</th>
+      <th>No. of Items</th>
+      <th>Total Amount</th>
+      <th>View</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for purchase in sale_history %}
+    <tr>
+      <td>{{ purchase.id }}</td>
+      <td>{{ purchase.invoice_no }}</td>
+      <td>{{ purchase.sale_datetime }}</td>
+      <td>{{ purchase.item_count }}</td>
+      <td>{{ "%.2f"|format(purchase.total_amount or 0) }}</td>
+      <td><a href="/bill/{{ purchase.id }}" class="btn btn-sm btn-primary">View</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="text-muted">No records found for this patient.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<script>
+function validateForm() {
+    let name = document.querySelector('[name="name"]').value.trim();
+    if (!name) {
+        alert("Warning: Patient name is required.");
+        return false;
+    }
+    return true;
+}
+</script>
+
+{% endblock %}

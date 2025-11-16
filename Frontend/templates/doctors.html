@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Doctors{% endblock %}
+{% block content %}
+<h2>Doctors</h2>
+
+<form method="post" class="mb-4">
+  {% if editing_doctor %}
+    <input type="hidden" name="editdoctor_id" value="{{ editing_doctor.id }}">
+  {% endif %}
+  <div class="mb-3">
+    <input type="text" name="name" placeholder="Doctor Name" class="form-control" required value="{{ editing_doctor.name if editing_doctor else '' }}">
+  </div>
+  <div class="mb-3">
+    <input type="text" name="contact_number" placeholder="Contact Number" class="form-control" value="{{ editing_doctor.contact_number if editing_doctor else '' }}">
+  </div>
+  <div class="mb-3">
+    <textarea name="address" placeholder="Address" class="form-control" rows="3">{{ editing_doctor.address if editing_doctor else '' }}</textarea>
+  </div>
+  <button type="submit" name="{{ 'editdoctor' if editing_doctor else 'adddoctor' }}" value="1" class="btn btn-primary mb-3">
+    {{ 'Update Doctor' if editing_doctor else 'Add Doctor' }}
+  </button>
+  {% if editing_doctor %}
+  <a href="{{ url_for('doctors_view') }}" class="btn btn-secondary mb-3 ms-2">Cancel Edit</a>
+  {% endif %}
+</form>
+
+<table class="table table-bordered table-striped text-center">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Contact Number</th>
+      <th>Address</th>
+      <th>Edit</th>
+      <th>Sales History</th>
+      <th>Delete</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for doctor in doctors %}
+    <tr>
+      <td>{{ doctor.id }}</td>
+      <td>{{ doctor.name }}</td>
+      <td>{{ doctor.contact_number }}</td>
+      <td>{{ doctor.address }}</td>
+      <td>
+        <form method="post" class="d-inline">
+          <input type="hidden" name="startedit_id" value="{{ doctor.id }}">
+          <button type="submit" class="btn btn-sm btn-warning">Edit</button>
+        </form>
+      </td>
+      <td>
+        <form method="post" class="d-inline">
+          <input type="hidden" name="viewsales_id" value="{{ doctor.id }}">
+          <button type="submit" class="btn btn-sm btn-info">View</button>
+        </form>
+      </td>
+      <td>
+        <form method="post" class="d-inline" onsubmit="return confirm('Delete this doctor?');">
+          <input type="hidden" name="deldoctor_id" value="{{ doctor.id }}">
+          <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="text-muted">No doctors found.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if show_history and doctor_detail %}
+<hr>
+<h4>Sales History for Dr. {{ doctor_detail.name }}</h4>
+<table class="table table-bordered table-striped text-center">
+  <thead>
+    <tr>
+      <th>Invoice No</th>
+      <th>Date</th>
+      <th>Patient</th>
+      <th>Total Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for sale in sale_history %}
+    <tr>
+      <td>{{ sale.invoice_no }}</td>
+      <td>{{ sale.sale_datetime }}</td>
+      <td>{{ sale.patient_name or '' }}</td>
+      <td>{{ "%.2f"|format(sale.total_amount or 0) }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="text-muted">No sales found for this doctor.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}
