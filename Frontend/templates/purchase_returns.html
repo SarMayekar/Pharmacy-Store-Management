@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h2 class="mb-0">Purchase Returns</h2>
+  <div>
+    <a href="/returns" class="btn btn-outline-secondary me-2">Back to Returns</a>
+    <a href="/purchases" class="btn btn-outline-primary">Open Purchases</a>
+  </div>
+</div>
+
+<form method="post" action="/purchase-returns" id="purchase-returns-form" class="mb-4">
+  <!-- Return Invoice -->
+  <label class="form-label">Return Invoice No.</label>
+  <input type="text" name="invoice_no" class="form-control mb-2" value="{{ purchase_return_invoice_no or '' }}" placeholder="Auto-generated, editable">
+
+  <label class="form-label">Return Date</label>
+  <input type="date" name="return_date" class="form-control mb-2" value="{{ purchase_return_date or '' }}">
+
+  <label class="form-label">Distributor</label>
+  <input type="text" name="distributor_name" list="distributor_list" placeholder="Distributor" required class="form-control mb-2" value="{{ purchase_distributor_name or '' }}" id="distributor_name_purchase">
+  <datalist id="distributor_list">
+    {% for dist in distributors %}
+      <option value="{{ dist.name }}">
+    {% endfor %}
+  </datalist>
+
+  <label class="form-label">Distributor Contact Number</label>
+  <input type="text" name="distributor_contact" placeholder="Optional" class="form-control mb-2" value="{{ purchase_distributor_contact or '' }}" id="distributor_contact_purchase">
+
+  <hr>
+  <h4>Returned Items</h4>
+  <div class="table-responsive">
+    <table class="table table-bordered align-middle text-center" id="purchase-returns-items-table">
+      <thead>
+        <tr>
+          <th>Action</th>
+          <th>Product</th>
+          <th>Batch</th>
+          <th>Expiry</th>
+          <th>HSN</th>
+          <th>MRP</th>
+          <th>Qty Returned</th>
+          <th>Purchase Rate</th>
+          <th>Sale Discount %</th>
+          <th>Sale Rate</th>
+          <th>SGST %</th>
+          <th>CGST %</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in range(purchase_rowcount) %}
+        <tr>
+          <td>
+            <button type="submit" name="delrow" value="{{ i }}" class="btn btn-sm btn-danger" title="Delete row">×</button>
+          </td>
+          <td>
+            <input type="text" name="items-{{ i }}-product" id="items-{{ i }}-product-purchase" list="medicine_list" class="form-control" placeholder="Product"
+                   value="{{ purchase_items[i]['product'] if purchase_items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="text" name="items-{{ i }}-batch_no" id="items-{{ i }}-batch_no-purchase" class="form-control" placeholder="Batch"
+                   value="{{ purchase_items[i]['batch_no'] if purchase_items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="date" name="items-{{ i }}-expiry_date" id="items-{{ i }}-expiry_date-purchase" class="form-control"
+                   value="{{ purchase_items[i]['expiry_date'] if purchase_items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="text" name="items-{{ i }}-hsn_code" id="items-{{ i }}-hsn_code-purchase" class="form-control" placeholder="HSN"
+                   value="{{ purchase_items[i]['hsn_code'] if purchase_items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" name="items-{{ i }}-mrp" id="items-{{ i }}-mrp-purchase" class="form-control" placeholder="MRP"
+                   value="{{ purchase_items[i]['mrp'] if purchase_items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="1" min="0" name="items-{{ i }}-quantity" class="form-control" placeholder="Qty"
+                   value="{{ purchase_items[i]['quantity'] if purchase_items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" name="items-{{ i }}-rate" class="form-control" placeholder="Pur. Rate"
+                   value="{{ purchase_items[i]['rate'] if purchase_items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" max="100" name="items-{{ i }}-sale_discount_percent" class="form-control" placeholder="Sale Disc%"
+                   value="{{ purchase_items[i]['sale_discount_percent'] if purchase_items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" name="items-{{ i }}-sale_rate" class="form-control" placeholder="Sale Rate"
+                   value="{{ purchase_items[i]['sale_rate'] if purchase_items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" max="100" name="items-{{ i }}-sgst_percent" id="items-{{ i }}-sgst_percent-purchase" class="form-control" placeholder="SGST%"
+                   value="{{ purchase_items[i]['sgst_percent'] if purchase_items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" max="100" name="items-{{ i }}-cgst_percent" id="items-{{ i }}-cgst_percent-purchase" class="form-control" placeholder="CGST%"
+                   value="{{ purchase_items[i]['cgst_percent'] if purchase_items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" name="items-{{ i }}-amount" class="form-control" placeholder="Amount"
+                   value="{{ purchase_items[i]['amount'] if purchase_items|length > i else '' }}">
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="row mb-3">
+    <div class="col text-end">
+      <label for="grand_total" class="form-label"><b>Grand Total (Rs):</b></label>
+      <input type="number" step="0.01" name="grand_total" id="grand_total" class="form-control d-inline-block" style="width:200px"
+      value="{{ purchase_grand_total if purchase_grand_total else '' }}">
+    </div>
+  </div>
+  <button type="submit" name="savepurchasereturn" value="1" class="btn btn-primary mb-3">Save Purchase Return</button>
+</form>
+
+<!-- Purchase Returns History Table -->
+<h4>Purchase Returns History</h4>
+<table class="table table-bordered table-striped text-center" id="purchase-returns-history-table">
+  <thead>
+    <tr>
+      <th>Return ID</th>
+      <th>Distributor</th>
+      <th>Date</th>
+      <th>No. of Items</th>
+      <th>Amount Total</th>
+      <th>View</th>
+      <th>Delete</th>
+    </tr>
+    <tr class="filter-row">
+      <th><input type="number" class="form-control filter-input" data-column="0" placeholder="Filter Return ID"></th>
+      <th><input type="text" class="form-control filter-input" data-column="1" placeholder="Filter Distributor"></th>
+      <th><input type="date" class="form-control filter-input" data-column="2"></th>
+      <th><input type="number" class="form-control filter-input" data-column="3" placeholder="Filter No. of Items"></th>
+      <th><input type="number" step="0.01" class="form-control filter-input" data-column="4" placeholder="Filter Amount Total"></th>
+      <th></th>
+      <th><button id="clear-purchase-returns-filters" class="btn btn-sm btn-secondary" title="Clear Filters">×</button></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for ret in purchase_returns_history %}
+    <tr>
+      <td>{{ ret.id }}</td>
+      <td>{{ ret.distributor_name or '' }}</td>
+      <td>{{ ret.return_datetime }}</td>
+      <td>{{ ret.item_count }}</td>
+      <td>{{ "%.2f"|format(ret.total_amount) }}</td>
+      <td>
+        <a href="/purchase-return/{{ ret.id }}" class="btn btn-sm btn-primary">View</a>
+      </td>
+      <td>
+        <form method="post" class="d-inline" onsubmit="return confirm('Delete this purchase return?');">
+          <input type="hidden" name="delpurchasereturn_id" value="{{ ret.id }}">
+          <button class="btn btn-sm btn-danger">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="text-muted">No purchase returns yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<datalist id="medicine_list">
+  {% for med in medicines %}
+  <option value="{{ med.name }}">
+  {% endfor %}
+</datalist>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // Filtering for purchase history
+  // Use shared filter utility
+  (function(){
+    function run() { if (window.ui && window.ui.applyFilters) window.ui.applyFilters("purchase-returns-history-table", "clear-purchase-returns-filters"); }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
+  })();
+
+  // Autofill distributor contact
+  document.getElementById('distributor_name_purchase').addEventListener('input', function() {
+    const distributorName = this.value.trim();
+    if (distributorName) {
+      window.autofill.fetchDistributor(distributorName)
+        .then(data => window.autofill.fillContact('distributor_contact_purchase', data))
+        .catch(error => console.error('Error fetching distributor data:', error));
+    }
+  });
+
+  // Autofill medicine details for purchase returns
+  document.addEventListener('input', function(event) {
+    if (event.target.matches('[id^="items-"][id$="-product-purchase"]')) {
+      const productInput = event.target;
+      const rowIndex = productInput.id.match(/items-(\d+)-product-purchase/)[1];
+      const medicineName = productInput.value.trim();
+      if (medicineName) {
+        window.autofill.fetchMedicine(medicineName)
+          .then(response => response.json())
+          .then(data => {
+                if (data.length > 0) {
+              if (data.length === 1) {
+                window.fillMedicineFields(rowIndex, data[0]);
+              } else {
+                const batchInput = document.getElementById(`items-${rowIndex}-batch_no-purchase`);
+                const select = document.createElement('select');
+                select.id = batchInput.id;
+                select.name = batchInput.name;
+                select.className = batchInput.className;
+                select.innerHTML = '<option value="">Select Batch</option>' + data.map(med => `<option value="${med.batch_no}" data-med='${JSON.stringify(med)}'>${med.batch_no} (Expiry: ${med.expiry_date})</option>`).join('');
+                batchInput.parentNode.replaceChild(select, batchInput);
+                const firstMed = data[0];
+                select.value = firstMed.batch_no;
+                window.fillMedicineFields(rowIndex, firstMed);
+                select.addEventListener('change', function() {
+                  const selectedOption = this.options[this.selectedIndex];
+                    if (selectedOption.value) {
+                    const med = JSON.parse(selectedOption.getAttribute('data-med'));
+                    window.fillMedicineFields(rowIndex, med);
+                  }
+                });
+              }
+            }
+          })
+          .catch(error => console.error('Error fetching medicine data:', error));
+      }
+    }
+  });
+
+  // Re-run recalculations handled by shared calc utilities on autofill
+  document.addEventListener('autofill:medicine', function(e) {
+    try { window.calc.calcRow(e.detail.rowIndex, document); window.calc.recalcAll(document); } catch (err) {}
+  });
+
+  // initialization: hook up shared listeners and recalc
+  const initialRows = document.querySelectorAll('[name^="items-"][name$="-quantity"]');
+  for (let i = 0; i < initialRows.length; i++) window.calc.attachRowListeners(i, document);
+  window.calc.attachTotalListeners(document);
+  window.calc.recalcAll(document);
+});
+</script>
+
+{% endblock %}

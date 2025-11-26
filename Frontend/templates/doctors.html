@@ -3,6 +3,7 @@
 {% block content %}
 <h2>Doctors</h2>
 
+<!-- Add or Edit Doctor Form -->
 <form method="post" class="mb-4">
   {% if editing_doctor %}
     <input type="hidden" name="editdoctor_id" value="{{ editing_doctor.id }}">
@@ -16,7 +17,7 @@
   <div class="mb-3">
     <textarea name="address" placeholder="Address" class="form-control" rows="3">{{ editing_doctor.address if editing_doctor else '' }}</textarea>
   </div>
-  <button type="submit" name="{{ 'editdoctor' if editing_doctor else 'adddoctor' }}" value="1" class="btn btn-primary mb-3">
+  <button type="submit" name="{{ 'editdoctor' if editing_doctor else 'adddoctor' }}" value="1" class="btn btn-primary mb-3" onclick="return validateForm()">
     {{ 'Update Doctor' if editing_doctor else 'Add Doctor' }}
   </button>
   {% if editing_doctor %}
@@ -24,7 +25,7 @@
   {% endif %}
 </form>
 
-<table class="table table-bordered table-striped text-center">
+<table class="table table-bordered table-striped text-center" id="doctors-table">
   <thead>
     <tr>
       <th>ID</th>
@@ -32,8 +33,15 @@
       <th>Contact Number</th>
       <th>Address</th>
       <th>Edit</th>
-      <th>Sales History</th>
       <th>Delete</th>
+    </tr>
+    <tr class="filter-row">
+      <th><input type="number" class="form-control filter-input" data-column="0" placeholder="Filter ID"></th>
+      <th><input type="text" class="form-control filter-input" data-column="1" placeholder="Filter Name"></th>
+      <th><input type="text" class="form-control filter-input" data-column="2" placeholder="Filter Contact Number"></th>
+      <th><input type="text" class="form-control filter-input" data-column="3" placeholder="Filter Address"></th>
+      <th></th>
+      <th><button id="clear-filters" class="btn btn-sm btn-secondary" title="Clear Filters">×</button></th>
     </tr>
   </thead>
   <tbody>
@@ -50,12 +58,6 @@
         </form>
       </td>
       <td>
-        <form method="post" class="d-inline">
-          <input type="hidden" name="viewsales_id" value="{{ doctor.id }}">
-          <button type="submit" class="btn btn-sm btn-info">View</button>
-        </form>
-      </td>
-      <td>
         <form method="post" class="d-inline" onsubmit="return confirm('Delete this doctor?');">
           <input type="hidden" name="deldoctor_id" value="{{ doctor.id }}">
           <button type="submit" class="btn btn-sm btn-danger">Delete</button>
@@ -63,35 +65,28 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="7" class="text-muted">No doctors found.</td></tr>
+    <tr><td colspan="6" class="text-muted">No doctors found.</td></tr>
     {% endfor %}
   </tbody>
 </table>
 
-{% if show_history and doctor_detail %}
-<hr>
-<h4>Sales History for Dr. {{ doctor_detail.name }}</h4>
-<table class="table table-bordered table-striped text-center">
-  <thead>
-    <tr>
-      <th>Invoice No</th>
-      <th>Date</th>
-      <th>Patient</th>
-      <th>Total Amount</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for sale in sale_history %}
-    <tr>
-      <td>{{ sale.invoice_no }}</td>
-      <td>{{ sale.sale_datetime }}</td>
-      <td>{{ sale.patient_name or '' }}</td>
-      <td>{{ "%.2f"|format(sale.total_amount or 0) }}</td>
-    </tr>
-    {% else %}
-    <tr><td colspan="4" class="text-muted">No sales found for this doctor.</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
-{% endif %}
+<script>
+function validateForm() {
+    let name = document.querySelector('[name="name"]').value.trim();
+    if (!name) {
+        alert("Warning: Doctor name is required.");
+        return false;
+    }
+    return true;
+}
+
+// Use shared filter utility
+;(function(){
+  function run() { if (window.ui && window.ui.applyFilters) window.ui.applyFilters('doctors-table', 'clear-filters'); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
+})();
+</script>
+
+<button id="clear-filters" class="btn btn-secondary mt-3">Clear Filters</button>
+
 {% endblock %}

@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Bill - Invoice #{{ sale.invoice_no }}</h2>
-<p><strong>Date:</strong> {{ sale.sale_datetime }}</p>
-<p><strong>Patient:</strong> {{ sale.patient_name or 'N/A' }}</p>
-<p><strong>Doctor:</strong> {{ sale.doctor_name or 'N/A' }}</p>
+<h2>Purchase Detail - Invoice #{{ purchase.invoice_no }}</h2>
+<p><strong>Date:</strong> {{ purchase.purchase_date }}</p>
+<p><strong>Distributor:</strong> {{ purchase.distributor_name or 'N/A' }}</p>
+<p><strong>Trade Type:</strong> {{ purchase.trade_type or 'N/A' }}</p>
 
-<table class="table table-bordered mt-3" id="bill-table">
+<table class="table table-bordered mt-3" id="purchase-detail-table">
   <thead>
     <tr>
       <th>Sr No</th>
@@ -42,10 +42,6 @@
   </tbody>
 </table>
 
-<p><strong>MRP Total: Rs {{ "%.2f"|format(mrp_total or 0) }}</strong></p>
-<p><strong>Total Amount: Rs {{ "%.2f"|format(sale.total_amount or 0) }}</strong></p>
-<p><strong>Savings: Rs {{ "%.2f"|format(savings or 0) }}</strong></p>
-
-<button onclick="window.print()" class="btn btn-primary mt-3">Print / Download</button>
+<p><strong>Total Amount: Rs {{ "%.2f"|format(purchase.total_amount or 0) }}</strong></p>
 
 {% endblock %}

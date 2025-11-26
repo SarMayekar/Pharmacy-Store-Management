@@ -27,7 +27,7 @@
   {% endif %}
 </form>
 
-<table class="table table-bordered table-striped text-center">
+<table class="table table-bordered table-striped text-center" id="distributors-table">
   <thead>
     <tr>
       <th>ID</th>
@@ -37,6 +37,21 @@
       <th>Edit</th>
       <th>Purchase History</th>
       <th>Delete</th>
+    </tr>
+    <tr class="filter-row">
+      <th><input type="number" class="form-control filter-input" data-column="0" placeholder="Filter ID"></th>
+      <th><input type="text" class="form-control filter-input" data-column="1" placeholder="Filter Name"></th>
+      <th><input type="text" class="form-control filter-input" data-column="2" placeholder="Filter Contact Number"></th>
+      <th>
+        <select class="form-control filter-input" data-column="3">
+          <option value="">All</option>
+          <option value="Retail">Retail</option>
+          <option value="Wholesale">Wholesale</option>
+        </select>
+      </th>
+      <th></th>
+      <th></th>
+      <th><button id="clear-filters" class="btn btn-sm btn-secondary" title="Clear Filters">×</button></th>
     </tr>
   </thead>
   <tbody>
@@ -105,6 +120,14 @@ function validateForm() {
     }
     return true;
 }
+
+// Use shared filter utility
+;(function(){
+  function run() { if (window.ui && window.ui.applyFilters) window.ui.applyFilters('distributors-table', 'clear-filters'); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
+})();
 </script>
+
+<button id="clear-filters" class="btn btn-secondary mt-3">Clear Filters</button>
 
 {% endblock %}

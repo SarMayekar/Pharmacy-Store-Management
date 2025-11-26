@@ -47,16 +47,16 @@
       <thead>
         <tr>
           <th>Action</th>
-          <th>Medicine</th>
+          <th>Product</th>
           <th>Batch</th>
           <th>Expiry</th>
           <th>HSN</th>
           <th>MRP</th>
           <th>Qty</th>
+          <th>Discount %</th>
           <th>Rate</th>
           <th>SGST %</th>
           <th>CGST %</th>
-          <th>Discount %</th>
           <th>Amount</th>
         </tr>
       </thead>
@@ -69,11 +69,6 @@
           <td>
             <input type="text" name="items-{{ i }}-product" id="items-{{ i }}-product" list="medicine_list" placeholder="Type/select medicine" class="form-control"
                    value="{{ items[i]['product'] if items|length > i else '' }}">
-            <datalist id="medicine_list">
-              {% for med in medicines %}
-              <option value="{{ med.name }}">
-              {% endfor %}
-            </datalist>
           </td>
           <td>
             <input type="text" name="items-{{ i }}-batch_no" id="items-{{ i }}-batch_no" class="form-control" placeholder="Batch"
@@ -96,6 +91,10 @@
                    value="{{ items[i]['quantity'] if items|length > i else '' }}">
           </td>
           <td>
+            <input type="number" step="0.01" min="0" max="100" name="items-{{ i }}-discount_percent" class="form-control" placeholder="Discount%"
+                   value="{{ items[i]['discount_percent'] if items|length > i else '' }}">
+          </td>
+          <td>
             <input type="number" step="0.01" min="0" name="items-{{ i }}-rate" class="form-control" placeholder="Rate"
                    value="{{ items[i]['rate'] if items|length > i else '' }}">
           </td>
@@ -106,10 +105,6 @@
           <td>
             <input type="number" step="0.01" min="0" max="100" name="items-{{ i }}-cgst_percent" id="items-{{ i }}-cgst_percent" class="form-control" placeholder="CGST%"
                    value="{{ items[i]['cgst_percent'] if items|length > i else '' }}">
-          </td>
-          <td>
-            <input type="number" step="0.01" min="0" max="100" name="items-{{ i }}-discount_percent" class="form-control" placeholder="Discount%"
-                   value="{{ items[i]['discount_percent'] if items|length > i else '' }}">
           </td>
           <td>
             <input type="number" step="0.01" min="0" name="items-{{ i }}-amount" class="form-control" placeholder="Amount"
@@ -142,9 +137,15 @@
   <button type="submit" name="savesale" value="1" class="btn btn-primary mb-3" onclick="return validateForm()">Save Sale</button>
 </form>
 
+<datalist id="medicine_list">
+  {% for med in medicines %}
+  <option value="{{ med.name }}">
+  {% endfor %}
+</datalist>
+
 <!-- Sales History Table -->
 <h4>Sales History</h4>
-<table class="table table-bordered table-striped text-center">
+<table class="table table-bordered table-striped text-center" id="sales-history-table">
   <thead>
     <tr>
       <th>Invoice ID</th>
@@ -154,6 +155,15 @@
       <th>Amount Total</th>
       <th>Print/View</th>
       <th>Delete</th>
+    </tr>
+    <tr class="filter-row">
+      <th><input type="text" class="form-control filter-input" data-column="0" placeholder="Filter Invoice ID"></th>
+      <th><input type="text" class="form-control filter-input" data-column="1" placeholder="Filter Patient Name"></th>
+      <th><input type="date" class="form-control filter-input" data-column="2"></th>
+      <th><input type="number" class="form-control filter-input" data-column="3" placeholder="Filter No. of Items"></th>
+      <th><input type="number" step="0.01" class="form-control filter-input" data-column="4" placeholder="Filter Amount Total"></th>
+      <th></th>
+      <th><button id="clear-filters" class="btn btn-sm btn-secondary" title="Clear Filters">×</button></th>
     </tr>
   </thead>
   <tbody>
@@ -269,103 +279,20 @@ document.addEventListener("DOMContentLoaded", function () {
         return true;
     }
 
-    function recalcAll() {
-        let rows = document.querySelectorAll('[name^="items-"][name$="-quantity"]');
-        let total_mrp = 0, total_actual = 0;
-
-        rows.forEach((qtyInput, idx) => {
-            calcRow(idx);
-            let mrp = toFloat(document.querySelector(`[name="items-${idx}-mrp"]`).value);
-            let sgst = toFloat(document.querySelector(`[name="items-${idx}-sgst_percent"]`).value);
-            let cgst = toFloat(document.querySelector(`[name="items-${idx}-cgst_percent"]`).value);
-            let qty = toFloat(qtyInput.value);
-            let amount = toFloat(document.querySelector(`[name="items-${idx}-amount"]`).value);
-
-            let item_mrp_total = (mrp * qty) + ((mrp * qty) * sgst / 100) + ((mrp * qty) * cgst / 100);
-            total_mrp += item_mrp_total;
-            total_actual += amount;
-        });
-
-        let mrpInput = document.querySelector(`[name="grand_total_mrp"]`);
-        let actualInput = document.querySelector(`[name="grand_total_actual"]`);
-        let savingsInput = document.querySelector(`[name="savings_total"]`);
-
-        if (!mrpInput.dataset.locked || mrpInput.value.trim() === "")
-            mrpInput.value = total_mrp > 0 ? total_mrp.toFixed(2) : "";
-        if (!actualInput.dataset.locked || actualInput.value.trim() === "")
-            actualInput.value = total_actual > 0 ? total_actual.toFixed(2) : "";
-        if (!savingsInput.dataset.locked || savingsInput.value.trim() === "")
-            savingsInput.value = (total_mrp - total_actual > 0) ? (total_mrp - total_actual).toFixed(2) : "";
-    }
-
-    function calcRow(index) {
-        let qty = toFloat(document.querySelector(`[name="items-${index}-quantity"]`).value);
-        let rate = toFloat(document.querySelector(`[name="items-${index}-rate"]`).value);
-        let sgst = toFloat(document.querySelector(`[name="items-${index}-sgst_percent"]`).value);
-        let cgst = toFloat(document.querySelector(`[name="items-${index}-cgst_percent"]`).value);
-        let dis = toFloat(document.querySelector(`[name="items-${index}-discount_percent"]`).value);
-        let amountInput = document.querySelector(`[name="items-${index}-amount"]`);
-        // Excel-like override: if user has not typed manually or field is empty, auto-calc
-        if (!amountInput.dataset.locked || amountInput.value.trim() === "") {
-            let base = qty * rate;
-            let gst_sgst = base * sgst / 100;
-            let gst_cgst = base * cgst / 100;
-            let discount_amt = base * dis / 100;
-            let amount = base + gst_sgst + gst_cgst - discount_amt;
-            amountInput.value = amount > 0 ? amount.toFixed(2) : "";
-        }
-    }
-
-    function attachRowListeners(idx) {
-        ['quantity', 'rate', 'sgst_percent', 'cgst_percent', 'discount_percent', 'mrp'].forEach(field => {
-            let el = document.querySelector(`[name="items-${idx}-${field}"]`);
-            if (el) el.addEventListener("input", function () {
-                calcRow(idx);
-                recalcAll();
-            });
-        });
-        // Manual override for amount
-        let amount = document.querySelector(`[name="items-${idx}-amount"]`);
-        if (amount) {
-            amount.addEventListener("input", function () {
-                amount.dataset.locked = (amount.value.trim() !== "");
-                recalcAll();
-            });
-        }
-    }
-
-    function attachTotalListeners() {
-        ['grand_total_mrp', 'grand_total_actual', 'savings_total'].forEach(field => {
-            let el = document.querySelector(`[name="${field}"]`);
-            if (el) {
-                el.addEventListener("input", function () {
-                    el.dataset.locked = (el.value.trim() !== "");
-                });
-            }
-        });
-    }
-
-    // Attach to all current rows
-    let rows = document.querySelectorAll('[name^="items-"][name$="-quantity"]');
-    for (let i = 0; i < rows.length; i++)
-        attachRowListeners(i);
-    attachTotalListeners();
-
-    // Initial population
-    recalcAll();
+    // rely on shared calculation utilities for total field listeners
+      // initialize: attach listeners and run shared recalc
+      const rows = document.querySelectorAll('[name^="items-"][name$="-quantity"]');
+      for (let i = 0; i < rows.length; i++) window.calc.attachRowListeners(i, document);
+      window.calc.attachTotalListeners(document);
+      window.calc.recalcAll(document);
 
     // Autofill for patient name
     document.getElementById('patient_name').addEventListener('input', function() {
         const patientName = this.value.trim();
         if (patientName) {
-            fetch(`/api/patient/${encodeURIComponent(patientName)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.contact_number) {
-                        document.getElementById('patient_contact').value = data.contact_number;
-                    }
-                })
-                .catch(error => console.error('Error fetching patient data:', error));
+            window.autofill.fetchPatient(patientName)
+              .then(data => window.autofill.fillContact('patient_contact', data))
+              .catch(error => console.error('Error fetching patient data:', error));
         }
     });
 
@@ -373,14 +300,9 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById('doctor_name').addEventListener('input', function() {
         const doctorName = this.value.trim();
         if (doctorName) {
-            fetch(`/api/doctor/${encodeURIComponent(doctorName)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.contact_number) {
-                        document.getElementById('doctor_contact').value = data.contact_number;
-                    }
-                })
-                .catch(error => console.error('Error fetching doctor data:', error));
+            window.autofill.fetchDoctor(doctorName)
+              .then(data => window.autofill.fillContact('doctor_contact', data))
+              .catch(error => console.error('Error fetching doctor data:', error));
         }
     });
 
@@ -391,14 +313,14 @@ document.addEventListener("DOMContentLoaded", function () {
             const rowIndex = productInput.id.match(/items-(\d+)-product/)[1];
             const medicineName = productInput.value.trim();
             if (medicineName) {
-                fetch(`/api/medicine/${encodeURIComponent(medicineName)}`)
+                window.autofill.fetchMedicine(medicineName)
                     .then(response => response.json())
                     .then(data => {
                         if (data.length > 0) {
                             if (data.length === 1) {
                                 // Single batch: autofill directly
                                 const med = data[0];
-                                fillMedicineFields(rowIndex, med);
+                                window.fillMedicineFields(rowIndex, med);
                             } else {
                                 // Multiple batches: replace input with select dropdown
                                 const batchInput = document.getElementById(`items-${rowIndex}-batch_no`);
@@ -412,13 +334,13 @@ document.addEventListener("DOMContentLoaded", function () {
                                 // Auto-select first batch and fill fields
                                 const firstMed = data[0];
                                 select.value = firstMed.batch_no;
-                                fillMedicineFields(rowIndex, firstMed);
+                                window.fillMedicineFields(rowIndex, firstMed);
                                 // Add event listener for batch selection
                                 select.addEventListener('change', function() {
                                     const selectedOption = this.options[this.selectedIndex];
                                     if (selectedOption.value) {
                                         const med = JSON.parse(selectedOption.getAttribute('data-med'));
-                                        fillMedicineFields(rowIndex, med);
+                                        window.fillMedicineFields(rowIndex, med);
                                     }
                                 });
                             }
@@ -429,20 +351,17 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    function fillMedicineFields(rowIndex, med) {
-        if (med.batch_no) document.getElementById(`items-${rowIndex}-batch_no`).value = med.batch_no;
-        if (med.expiry_date) document.getElementById(`items-${rowIndex}-expiry_date`).value = med.expiry_date;
-        if (med.hsn_code) document.getElementById(`items-${rowIndex}-hsn_code`).value = med.hsn_code;
-        if (med.mrp) document.getElementById(`items-${rowIndex}-mrp`).value = med.mrp;
-        if (med.sgst_percent) document.getElementById(`items-${rowIndex}-sgst_percent`).value = med.sgst_percent;
-        if (med.cgst_percent) document.getElementById(`items-${rowIndex}-cgst_percent`).value = med.cgst_percent;
-        // Recalculate after autofill
-        calcRow(rowIndex);
-        recalcAll();
-    }
+    // fillMedicineFields is provided by the shared autofill.js (window.fillMedicineFields)
 
     // Also recalc on page changes (optional, e.g. after adding rows via POST)
+
+    // Recalculate when the shared autofill populates fields
+    document.addEventListener('autofill:medicine', function(e) {
+      try { const idx = e.detail.rowIndex; window.calc.calcRow(idx, document); window.calc.recalcAll(document); } catch (err) {}
+    });
 });
+
+if (window.ui && window.ui.applyFilters) window.ui.applyFilters('sales-history-table','clear-filters');
 </script>
 
 {% endblock %}

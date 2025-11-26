@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Bill - Invoice #{{ sale.invoice_no }}</h2>
-<p><strong>Date:</strong> {{ sale.sale_datetime }}</p>
-<p><strong>Patient:</strong> {{ sale.patient_name or 'N/A' }}</p>
-<p><strong>Doctor:</strong> {{ sale.doctor_name or 'N/A' }}</p>
+<h2>Sales Return Bill - Invoice #{{ sales_return.invoice_no }}</h2>
+<p><strong>Date:</strong> {{ sales_return.return_date }}</p>
+<p><strong>Patient:</strong> {{ sales_return.patient_name or 'N/A' }}</p>
+<p><strong>Doctor:</strong> {{ sales_return.doctor_name or 'N/A' }}</p>
 
-<table class="table table-bordered mt-3" id="bill-table">
+<table class="table table-bordered mt-3" id="sales-return-bill-table">
   <thead>
     <tr>
       <th>Sr No</th>
@@ -43,7 +43,7 @@
 </table>
 
 <p><strong>MRP Total: Rs {{ "%.2f"|format(mrp_total or 0) }}</strong></p>
-<p><strong>Total Amount: Rs {{ "%.2f"|format(sale.total_amount or 0) }}</strong></p>
+<p><strong>Total Amount: Rs {{ "%.2f"|format(sales_return.total_amount or 0) }}</strong></p>
 <p><strong>Savings: Rs {{ "%.2f"|format(savings or 0) }}</strong></p>
 
 <button onclick="window.print()" class="btn btn-primary mt-3">Print / Download</button>

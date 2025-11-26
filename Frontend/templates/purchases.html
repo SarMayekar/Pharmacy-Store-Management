@@ -1,87 +1,124 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+.expiry-near {
+    background-color: #f8d7da !important; /* Light red background */
+}
+</style>
 <h2>Purchases</h2>
 <form method="post" class="mb-4">
   <input type="hidden" name="rowcount" value="{{ rowcount }}">
+  <input type="hidden" name="edit_purchase_id" value="{{ edit_purchase_id or '' }}">
 
   <label class="form-label">Invoice No.</label>
-  <input type="text" name="invoice_no" placeholder="Invoice No" required class="form-control mb-2" value="{{ invoice_no or '' }}">
+  <input type="text" name="invoice_no" placeholder="Invoice No" required class="form-control mb-2" value="{{ editing_purchase['invoice_no'] if editing_purchase else invoice_no or '' }}">
 
   <label class="form-label">Distributor</label>
-  <input type="text" name="distributor_name" list="distributor_list" placeholder="Distributor" required class="form-control mb-2" value="{{ distributor_name or '' }}" id="distributor_name">
+  <input type="text" name="distributor_name" list="distributor_list" placeholder="Distributor" required class="form-control mb-2" value="{{ editing_purchase['distributor_name'] if editing_purchase else distributor_name or '' }}" id="distributor_name">
   <datalist id="distributor_list">
     {% for dist in distributors %}
       <option value="{{ dist.name }}">
     {% endfor %}
   </datalist>
+  <datalist id="medicine_list">
+    {% for med in medicines %}
+      <option value="{{ med.name }}">
+    {% endfor %}
+  </datalist>
 
   <!-- Distributor Contact Number -->
   <label class="form-label">Distributor Contact Number</label>
-  <input type="text" name="distributor_contact" placeholder="Optional" class="form-control mb-2" value="{{ distributor_contact or '' }}" id="distributor_contact">
+  <input type="text" name="distributor_contact" placeholder="Optional" class="form-control mb-2" value="{{ editing_purchase['distributor_contact'] if editing_purchase else distributor_contact or '' }}" id="distributor_contact">
 
   <label class="form-label">Trade Type</label>
   <select name="trade_type" class="form-select mb-2" id="trade_type">
     <option value="">--</option>
-    <option value="Retail" {% if trade_type == 'Retail' %}selected{% endif %}>Retail</option>
-    <option value="Wholesale" {% if trade_type == 'Wholesale' %}selected{% endif %}>Wholesale</option>
+    <option value="Retail" {% if editing_purchase and editing_purchase['trade_type'] == 'Retail' %}selected{% endif %}>Retail</option>
+    <option value="Wholesale" {% if editing_purchase and editing_purchase['trade_type'] == 'Wholesale' %}selected{% endif %}>Wholesale</option>
   </select>
 
   <label class="form-label">Date</label>
-  <input type="date" name="purchase_date" class="form-control mb-3" value="{{ purchase_date or '' }}">
+  <input type="date" name="purchase_date" class="form-control mb-3" value="{{ editing_purchase['purchase_date'] if editing_purchase else purchase_date or '' }}">
 
   <hr>
   <h4>Items</h4>
-  <div>
-    <div class="row fw-bold text-center mb-1">
-      <div class="col-auto">Action</div>
-      <div class="col">Medicine</div>
-      <div class="col">Batch</div>
-      <div class="col">Expiry</div>
-      <div class="col">HSN</div>
-      <div class="col">MRP</div>
-      <div class="col">Qty</div>
-      <div class="col">Rate</div>
-      <div class="col">SGST %</div>
-      <div class="col">CGST %</div>
-      <div class="col">Discount %</div>
-      <div class="col">Amount</div>
-    </div>
-    {% for i in range(rowcount) %}
-    <div class="row g-2 align-items-end mb-2">
-      <div class="col-auto">
-        <button type="submit" name="delrow" value="{{ i }}" class="btn btn-sm btn-danger" title="Delete row">×</button>
-      </div>
-      <div class="col">
-        <input type="text" name="items-{{i}}-product" list="medicine_list" placeholder="Type/select medicine" class="form-control"
-               value="{{ items[i]['product'] if items|length > i else '' }}">
-        <datalist id="medicine_list">
-          {% for med in medicines %}
-          <option value="{{ med.name }}">
-          {% endfor %}
-        </datalist>
-      </div>
-      <div class="col"><input type="text" name="items-{{i}}-batch_no" placeholder="Batch" class="form-control"
-        value="{{ items[i]['batch_no'] if items|length > i else '' }}"></div>
-      <div class="col"><input type="date" name="items-{{i}}-expiry_date" class="form-control"
-        value="{{ items[i]['expiry_date'] if items|length > i else '' }}"></div>
-      <div class="col"><input type="text" name="items-{{i}}-hsn_code" placeholder="HSN" class="form-control"
-        value="{{ items[i]['hsn_code'] if items|length > i else '' }}"></div>
-      <div class="col"><input type="number" step="0.01" name="items-{{i}}-mrp" placeholder="MRP" class="form-control"
-        value="{{ items[i]['mrp'] if items|length > i else '' }}"></div>
-      <div class="col"><input type="number" name="items-{{i}}-quantity" placeholder="Qty" class="form-control"
-        value="{{ items[i]['quantity'] if items|length > i else '' }}"></div>
-      <div class="col"><input type="number" step="0.01" name="items-{{i}}-rate" placeholder="Rate" class="form-control"
-        value="{{ items[i]['rate'] if items|length > i else '' }}"></div>
-      <div class="col"><input type="number" step="0.01" name="items-{{i}}-sgst_percent" placeholder="SGST%" class="form-control"
-        value="{{ items[i]['sgst_percent'] if items|length > i else '' }}"></div>
-      <div class="col"><input type="number" step="0.01" name="items-{{i}}-cgst_percent" placeholder="CGST%" class="form-control"
-        value="{{ items[i]['cgst_percent'] if items|length > i else '' }}"></div>
-      <div class="col"><input type="number" step="0.01" name="items-{{i}}-discount_percent" placeholder="Discount%" class="form-control"
-        value="{{ items[i]['discount_percent'] if items|length > i else '' }}"></div>
-      <div class="col"><input type="number" step="0.01" name="items-{{i}}-amount" placeholder="Amount" class="form-control"
-        value="{{ items[i]['amount'] if items|length > i else '' }}"></div>
-    </div>
-    {% endfor %}
+  <div class="table-responsive">
+    <table class="table table-bordered align-middle text-center">
+      <thead>
+        <tr>
+          <th>Action</th>
+          <th>Product</th>
+          <th>Batch</th>
+          <th>Expiry</th>
+          <th>HSN</th>
+          <th>MRP</th>
+          <th>Qty</th>
+          <th>Purchase Rate</th>
+          <th>Sale Discount %</th>
+          <th>Sale Rate</th>
+          <th>SGST %</th>
+          <th>CGST %</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for i in range(rowcount) %}
+        <tr>
+          <td>
+            <button type="submit" name="delrow" value="{{ i }}" class="btn btn-sm btn-danger" title="Delete row">×</button>
+          </td>
+          <td>
+            <input type="text" name="items-{{ i }}-product" id="items-{{ i }}-product" list="medicine_list" class="form-control" placeholder="Product"
+                   value="{{ items[i]['product'] if items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="text" name="items-{{ i }}-batch_no" id="items-{{ i }}-batch_no" class="form-control" placeholder="Batch"
+                   value="{{ items[i]['batch_no'] if items|length > i else '' }}">
+          </td>
+<td>
+  <input type="date" name="items-{{ i }}-expiry_date" id="items-{{ i }}-expiry_date" class="form-control expiry-date-input"
+         value="{{ items[i]['expiry_date'] if items|length > i else '' }}">
+</td>
+          <td>
+            <input type="text" name="items-{{ i }}-hsn_code" id="items-{{ i }}-hsn_code" class="form-control" placeholder="HSN"
+                   value="{{ items[i]['hsn_code'] if items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" name="items-{{ i }}-mrp" id="items-{{ i }}-mrp" class="form-control" placeholder="MRP"
+                   value="{{ items[i]['mrp'] if items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="1" min="0" name="items-{{ i }}-quantity" class="form-control" placeholder="Qty"
+                   value="{{ items[i]['quantity'] if items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" name="items-{{ i }}-rate" class="form-control" placeholder="Pur. Rate"
+                   value="{{ items[i]['rate'] if items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" max="100" name="items-{{ i }}-sale_discount_percent" class="form-control" placeholder="Sale Disc%"
+                   value="{{ items[i]['sale_discount_percent'] if items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" name="items-{{ i }}-sale_rate" class="form-control" placeholder="Sale Rate"
+                   value="{{ items[i]['sale_rate'] if items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" max="100" name="items-{{ i }}-sgst_percent" id="items-{{ i }}-sgst_percent" class="form-control" placeholder="SGST%"
+                   value="{{ items[i]['sgst_percent'] if items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" max="100" name="items-{{ i }}-cgst_percent" id="items-{{ i }}-cgst_percent" class="form-control" placeholder="CGST%"
+                   value="{{ items[i]['cgst_percent'] if items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" name="items-{{ i }}-amount" class="form-control" placeholder="Amount"
+                   value="{{ items[i]['amount'] if items|length > i else '' }}">
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
   </div>
 
   <div class="row mb-3">
@@ -96,7 +133,7 @@
 </form>
 <hr>
 <h4>Purchase Records</h4>
-<table class="table table-bordered table-striped text-center">
+<table class="table table-bordered table-striped text-center" id="purchases-history-table">
   <thead>
     <tr>
       <th>ID</th>
@@ -105,8 +142,26 @@
       <th>Trade</th>
       <th>Date</th>
       <th>Total Amount</th>
+      <th>Edit</th>
       <th>View</th>
       <th>Delete</th>
+    </tr>
+    <tr class="filter-row">
+      <th><input type="number" class="form-control filter-input" data-column="0" placeholder="Filter ID"></th>
+      <th><input type="text" class="form-control filter-input" data-column="1" placeholder="Filter Invoice"></th>
+      <th><input type="text" class="form-control filter-input" data-column="2" placeholder="Filter Distributor"></th>
+      <th>
+        <select class="form-control filter-input" data-column="3">
+          <option value="">All</option>
+          <option value="Retail">Retail</option>
+          <option value="Wholesale">Wholesale</option>
+        </select>
+      </th>
+      <th><input type="date" class="form-control filter-input" data-column="4"></th>
+      <th><input type="number" step="0.01" class="form-control filter-input" data-column="5" placeholder="Filter Total Amount"></th>
+      <th></th>
+      <th></th>
+      <th><button id="clear-filters" class="btn btn-sm btn-secondary" title="Clear Filters">×</button></th>
     </tr>
   </thead>
   <tbody>
@@ -120,9 +175,12 @@
       <td>{{"%.2f"|format(purchase.total_amount)}}</td>
       <td>
         <form method="post" class="d-inline">
-          <input type="hidden" name="showdetail_id" value="{{purchase.id}}">
-          <button class="btn btn-sm btn-primary">View</button>
+          <input type="hidden" name="startedit_id" value="{{purchase.id}}">
+          <button class="btn btn-sm btn-warning">Edit</button>
         </form>
+      </td>
+      <td>
+        <a href="{{ url_for('purchase_detail_view', purchase_id=purchase.id) }}" class="btn btn-sm btn-primary">View</a>
       </td>
       <td>
         <form method="post" class="d-inline" onsubmit="return confirm('Delete this purchase?');">
@@ -132,7 +190,7 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="8" class="text-muted">No purchases yet.</td></tr>
+    <tr><td colspan="9" class="text-muted">No purchases yet.</td></tr>
     {% endfor %}
   </tbody>
 </table>
@@ -172,69 +230,26 @@
 </div>
 {% endif %}
 
+<button id="clear-filters" class="btn btn-secondary mt-3">Clear Filters</button>
+
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+window.addEventListener("load", function () {
     function toFloat(val) {
         var num = parseFloat(val); return isNaN(num) ? 0 : num;
     }
     function rowCount() {
         return document.querySelectorAll(`input[name^="items-"][name$="-quantity"]`).length;
     }
-    function calcRow(i) {
-        let qty = toFloat(document.querySelector(`[name="items-${i}-quantity"]`).value);
-        let rate = toFloat(document.querySelector(`[name="items-${i}-rate"]`).value);
-        let sgst = toFloat(document.querySelector(`[name="items-${i}-sgst_percent"]`).value);
-        let cgst = toFloat(document.querySelector(`[name="items-${i}-cgst_percent"]`).value);
-        let dis = toFloat(document.querySelector(`[name="items-${i}-discount_percent"]`).value);
-        let amountInput = document.querySelector(`[name="items-${i}-amount"]`);
-        if (!amountInput.dataset.locked || amountInput.value.trim() === "") {
-            let base = qty * rate;
-            let gst_sgst = base * sgst / 100;
-            let gst_cgst = base * cgst / 100;
-            let discount_amt = base * dis / 100;
-            let amount = base + gst_sgst + gst_cgst - discount_amt;
-            amountInput.value = amount > 0 ? amount.toFixed(2) : "";
-        }
-    }
-    function recalcAll() {
-        let rows = rowCount();
-        let total_actual = 0;
-        for (let i = 0; i < rows; i++) {
-            calcRow(i);
-            let amount = toFloat(document.querySelector(`[name="items-${i}-amount"]`).value);
-            total_actual += amount;
-        }
-        let grandInput = document.querySelector(`[name="grand_total"]`);
-        if (!grandInput.dataset.locked || grandInput.value.trim() === "")
-            grandInput.value = total_actual > 0 ? total_actual.toFixed(2) : "";
-    }
-    function attachRowListeners(i) {
-        ['quantity', 'rate', 'sgst_percent', 'cgst_percent', 'discount_percent'].forEach(field => {
-            let el = document.querySelector(`[name="items-${i}-${field}"]`);
-            if (el) el.addEventListener("input", function () {
-                calcRow(i); recalcAll();
-            });
-        });
-        let amount = document.querySelector(`[name="items-${i}-amount"]`);
-        if (amount) {
-            amount.addEventListener("input", function () {
-                amount.dataset.locked = (amount.value.trim() !== "");
-                recalcAll();
-            });
-        }
-    }
-    function attachTotalListeners() {
-        let grandInput = document.querySelector(`[name="grand_total"]`);
-        if (grandInput) {
-            grandInput.addEventListener("input", function () {
-                grandInput.dataset.locked = (grandInput.value.trim() !== "");
-            });
-        }
-    }
+    // Use shared calculation utilities
     let rows = rowCount();
-    for (let i = 0; i < rows; i++) attachRowListeners(i);
-    attachTotalListeners();
-    recalcAll();
+    for (let i = 0; i < rows; i++) window.calc.attachRowListeners(i, document);
+    window.calc.attachTotalListeners(document);
+    window.calc.recalcAll(document);
+
+    // Recalculate when autofill updates fields
+    document.addEventListener('autofill:medicine', function(e) {
+      try { window.calc.calcRow(e.detail.rowIndex, document); window.calc.recalcAll(document); } catch (err) {}
+    });
 
     function validateForm() {
         let invoiceNo = document.querySelector('[name="invoice_no"]').value.trim();
@@ -293,19 +308,137 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById('distributor_name').addEventListener('input', function() {
         let name = this.value.trim();
         if (name) {
-            fetch(`/api/distributor/${encodeURIComponent(name)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.contact_number) {
-                        document.getElementById('distributor_contact').value = data.contact_number;
-                    }
-                    if (data.trade_type) {
-                        document.getElementById('trade_type').value = data.trade_type;
-                    }
-                })
-                .catch(error => console.error('Error fetching distributor details:', error));
+          window.autofill.fetchDistributor(name)
+            .then(data => {
+              window.autofill.fillContact('distributor_contact', data);
+              if (data.trade_type) {
+                document.getElementById('trade_type').value = data.trade_type;
+              }
+            })
+            .catch(error => console.error('Error fetching distributor details:', error));
         }
     });
+
+    // Autofill for medicine details
+    document.addEventListener('input', function(event) {
+        if (event.target.matches('[id^="items-"][id$="-product"]')) {
+            const productInput = event.target;
+            const rowIndex = productInput.id.match(/items-(\d+)-product/)[1];
+            const medicineName = productInput.value.trim();
+            if (medicineName) {
+                window.autofill.fetchMedicine(medicineName)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.length > 0) {
+                            if (data.length === 1) {
+                                const med = data[0];
+                    window.fillMedicineFields(rowIndex, med);
+                            } else {
+                                const batchInput = document.getElementById(`items-${rowIndex}-batch_no`);
+                                const select = document.createElement('select');
+                                select.id = batchInput.id;
+                                select.name = batchInput.name;
+                                select.className = batchInput.className;
+                                select.innerHTML = '<option value="">Select Batch</option>' +
+                                    data.map(med => `<option value="${med.batch_no}" data-med='${JSON.stringify(med)}'>${med.batch_no} (Expiry: ${med.expiry_date})</option>`).join('');
+                                batchInput.parentNode.replaceChild(select, batchInput);
+                                const firstMed = data[0];
+                                select.value = firstMed.batch_no;
+                    window.fillMedicineFields(rowIndex, firstMed);
+                                select.addEventListener('change', function() {
+                                    const selectedOption = this.options[this.selectedIndex];
+                                    if (selectedOption.value) {
+                                        const med = JSON.parse(selectedOption.getAttribute('data-med'));
+                        window.fillMedicineFields(rowIndex, med);
+                                    }
+                                });
+                            }
+                        }
+                    })
+                    .catch(error => console.error('Error fetching medicine data:', error));
+            }
+        }
+    });
+
+    // fillMedicineFields is provided by the shared autofill.js (window.fillMedicineFields)
+    
+    // Expiry date highlighting logic
+    function highlightExpiryRows() {
+        const expiryInputs = document.querySelectorAll('.expiry-date-input');
+        const now = new Date();
+        const nearExpiryThreshold = 30; // days
+
+        expiryInputs.forEach(input => {
+            const tr = input.closest('tr');
+            if (!input.value) {
+                tr.classList.remove('expiry-near');
+                return;
+            }
+            const expiryDate = new Date(input.value);
+            const diffTime = expiryDate - now;
+            const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+            if (diffDays >= 0 && diffDays <= nearExpiryThreshold) {
+                tr.classList.add('expiry-near');
+            } else {
+                tr.classList.remove('expiry-near');
+            }
+        });
+    }
+
+    // Initial highlight on page load with delay
+    setTimeout(highlightExpiryRows, 100);
+
+    // Update highlight on expiry date input change
+    document.querySelectorAll('.expiry-date-input').forEach(input => {
+        input.addEventListener('input', highlightExpiryRows);
+    });
+
+    // Update highlight after adding a row
+    const addRowBtn = document.querySelector('button[name="addrow"]');
+    if (addRowBtn) {
+        addRowBtn.addEventListener('click', function () {
+            setTimeout(highlightExpiryRows, 100);
+        });
+    }
 });
+
+// Use shared filter utility
+;(function(){
+  function run() { if (window.ui && window.ui.applyFilters) window.ui.applyFilters('purchases-history-table', 'clear-filters'); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
+})();
+    // Expiry date highlighting logic
+    function highlightExpiryRows() {
+        const expiryInputs = document.querySelectorAll('.expiry-date-input');
+        const now = new Date();
+        const nearExpiryThreshold = 30; // days
+
+        expiryInputs.forEach(input => {
+            const tr = input.closest('tr');
+            if (!input.value) {
+                tr.classList.remove('expiry-near');
+                return;
+            }
+            const expiryDate = new Date(input.value);
+            const diffTime = expiryDate - now;
+            const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+            if (diffDays >= 0 && diffDays <= nearExpiryThreshold) {
+                tr.classList.add('expiry-near');
+            } else {
+                tr.classList.remove('expiry-near');
+            }
+        });
+    }
+
+    // Initial highlight on page load
+    highlightExpiryRows();
+
+    // Update highlight on expiry date input change
+    document.querySelectorAll('.expiry-date-input').forEach(input => {
+        input.addEventListener('input', highlightExpiryRows);
+    });
 </script>
+
 {% endblock %}

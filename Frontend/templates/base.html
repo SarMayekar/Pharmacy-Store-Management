@@ -8,25 +8,31 @@
     <style>
         body { background: #f8f9fa; }
         .navbar { margin-bottom: 25px; }
+        /* Autofill visual indicator when inputs are populated programmatically */
+        .autofilled { background-color: #e9f7ef !important; border-left: 3px solid #34a853; }
     </style>
     {% block head_extra %}{% endblock %}
+    <script src="{{ url_for('static', filename='js/autofill.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ui-utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/calculations.js') }}"></script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand" href="/">Astiva Drug House</a>
+            <a class="navbar-brand" href="/">Astitva Drug House</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="/">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/sales">Sales</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/purchases">Purchases</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/medicines">Medicines</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/patients">Patients</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/doctors">Doctors</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/distributors">Distributors</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.path.startswith('/sales') %}active{% endif %}" href="/sales">Sales</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.path.startswith('/purchases') %}active{% endif %}" href="/purchases">Purchases</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.path.startswith('/medicines') %}active{% endif %}" href="/medicines">Medicines</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.path.startswith('/patients') %}active{% endif %}" href="/patients">Patients</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.path.startswith('/doctors') %}active{% endif %}" href="/doctors">Doctors</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.path.startswith('/distributors') %}active{% endif %}" href="/distributors">Distributors</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.path.startswith('/returns') %}active{% endif %}" href="/returns">Returns</a></li>
                 </ul>
             </div>
         </div>
