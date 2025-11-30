@@ -2,15 +2,26 @@ import os
 import mysql.connector
 import datetime
 import logging
+import sys
 from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
 
-# Paths for Flask template and static folders
-project_root = os.path.abspath(os.path.dirname(__file__))
-template_dir = os.path.abspath(os.path.join(project_root, '../Frontend/templates'))
-static_dir = os.path.abspath(os.path.join(project_root, '../Frontend/static'))
-
+# Define the base path
+if getattr(sys, 'frozen', False):
+    # If running as an EXE, use the temporary internal folder
+    base_path = sys._MEIPASS
+    template_dir = os.path.join(base_path, 'templates')
+    static_dir = os.path.join(base_path, 'static')
+else:
+    # If running as a script, use the standard path
+    base_path = os.path.abspath(os.path.dirname(__file__))
+    template_dir = os.path.join(base_path, '../Frontend/templates')
+    static_dir = os.path.join(base_path, '../Frontend/static')
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 app.secret_key = 'your_unique_secret_key_here_12345'
+
+@app.route('/test')
+def test():
+    return "Server is working!"
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -1942,6 +1953,12 @@ def purchase_returns_view():
                            sales_rowcount=1, sales_items=[{}], sales_returns_history=[],
                            patients=[], medicines=[])
 
-if __name__ == '__main__':
-    app.run(debug=True)
+import webbrowser
+from threading import Timer
 
+def open_browser():
+    webbrowser.open_new('http://127.0.0.1:5000/')
+
+if __name__ == "__main__":
+    Timer(1, open_browser).start() 
+    app.run(debug=True)            

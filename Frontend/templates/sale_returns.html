@@ -242,3 +242,7 @@ document.addEventListener("DOMContentLoaded", function() {
   for (let i = 0; i < initialRows.length; i++) window.calc.attachRowListeners(i, document);
   window.calc.attachTotalListeners(document);
   window.calc.recalcAll(document);
+});
+</script>
+{% endblock %}
+{# forcing build refresh #}

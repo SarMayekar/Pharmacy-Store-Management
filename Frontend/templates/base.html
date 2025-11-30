@@ -12,9 +12,262 @@
         .autofilled { background-color: #e9f7ef !important; border-left: 3px solid #34a853; }
     </style>
     {% block head_extra %}{% endblock %}
-    <script src="{{ url_for('static', filename='js/autofill.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/ui-utils.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/calculations.js') }}"></script>
+    <script>
+// Unified autofill utilities for medicines, patients, doctors and distributors
+// Provides a `fillMedicineFields(rowIndex, med)` function and helper fetchers
+window.autofill = (function() {
+  function getIdCandidates(rowIndex, field) {
+    return [
+      `items-${rowIndex}-${field}`,
+      `items-${rowIndex}-${field}-sales`,
+      `items-${rowIndex}-${field}-purchase`
+    ];
+  }
+
+  function setFirstExisting(rowIndex, field, value) {
+    if (value === undefined || value === null) return;
+    const ids = getIdCandidates(rowIndex, field);
+    for (const id of ids) {
+      const el = document.getElementById(id) || document.querySelector(`[name="${id}"]`);
+      if (el) { el.value = value; el.classList.add('autofilled'); return true; }
+    }
+    return false;
+  }
+
+  function setByName(rowIndex, field, value) {
+    if (value === undefined || value === null) return;
+    const name = `items-${rowIndex}-${field}`;
+    const el = document.querySelector(`[name="${name}"]`);
+    if (el) { el.value = value; el.classList.add('autofilled'); return true; }
+    // fallback: try suffixes
+    const el2 = document.querySelector(`[name="${name}-sales"]`) || document.querySelector(`[name="${name}-purchase"]`);
+    if (el2) { el2.value = value; return true; }
+    return false;
+  }
+
+  function fillMedicineFields(rowIndex, med) {
+    // Fill generic fields (batch, expiry, hsn, mrp, gst fields)
+    setFirstExisting(rowIndex, 'batch_no', med.batch_no);
+    setFirstExisting(rowIndex, 'expiry_date', med.expiry_date);
+    setFirstExisting(rowIndex, 'hsn_code', med.hsn_code);
+    setFirstExisting(rowIndex, 'mrp', med.mrp);
+    setFirstExisting(rowIndex, 'sgst_percent', med.sgst_percent);
+    setFirstExisting(rowIndex, 'cgst_percent', med.cgst_percent);
+
+    // Fill sale_rate if a dedicated sale_rate field exists
+    if (med.sale_rate !== undefined) {
+      // Try exact name first
+      setByName(rowIndex, 'sale_rate', med.sale_rate);
+    }
+
+    // For the main `rate` field (name="items-<i>-rate") we pick the best candidate:
+    // - If the page has a separate sale_rate field (name exists), we assume `rate` is purchase rate (purchases)
+    // - Otherwise, treat `rate` as the sale rate (sales pages / returns where relevant)
+    const rateEl = document.querySelector(`[name="items-${rowIndex}-rate"]`);
+    const saleRateEl = document.querySelector(`[name="items-${rowIndex}-sale_rate"]`);
+    if (rateEl) {
+      if (saleRateEl) {
+        // This is likely a purchases page (has both fields). Use purchase_rate when available
+        if (med.purchase_rate !== undefined && med.purchase_rate !== null) rateEl.value = med.purchase_rate;
+        else if (med.sale_rate !== undefined && med.sale_rate !== null) rateEl.value = med.sale_rate;
+      } else {
+        // No dedicated sale_rate field — treat `rate` as sale rate first
+        if (med.sale_rate !== undefined && med.sale_rate !== null) rateEl.value = med.sale_rate;
+        else if (med.purchase_rate !== undefined && med.purchase_rate !== null) rateEl.value = med.purchase_rate;
+      }
+    }
+
+    // After autofill, trigger a custom event so page-specific code can react (recalc or similar)
+    try {
+      const evt = new CustomEvent('autofill:medicine', { detail: { rowIndex, med } });
+      document.dispatchEvent(evt);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+// Remove autofill visual marker when user edits a field manually
+document.addEventListener('input', function(e) {
+  try {
+    const el = e.target;
+    if (!el) return;
+    const name = el.name || el.id || '';
+    if (/^items-/.test(name)) {
+      el.classList.remove('autofilled');
+    }
+  } catch (err) {}
+});
+
+  // Fetch helpers
+  function fetchMedicine(name) {
+    return fetch(`/api/medicine/${encodeURIComponent(name)}`).then(r => r.json());
+  }
+
+  function fetchPatient(name) {
+    return fetch(`/api/patient/${encodeURIComponent(name)}`).then(r => r.json());
+  }
+
+  function fetchDistributor(name) {
+    return fetch(`/api/distributor/${encodeURIComponent(name)}`).then(r => r.json());
+  }
+
+  function fetchDoctor(name) {
+    return fetch(`/api/doctor/${encodeURIComponent(name)}`).then(r => r.json());
+  }
+
+  // Helper to autofill contact number into a field (if present)
+  function fillContact(targetId, data) {
+    try {
+      if (!data) return;
+      const el = document.getElementById(targetId) || document.querySelector(`[name="${targetId}"]`);
+      if (el && data.contact_number) el.value = data.contact_number;
+    } catch (e) {}
+  }
+
+  return {
+    fillMedicineFields,
+    fetchMedicine,
+    fetchPatient,
+    fetchDistributor,
+    fetchDoctor,
+    fillContact
+  };
+})();
+
+// When other page code may expect plain fillMedicineFields in global scope, expose directly
+window.fillMedicineFields = window.autofill.fillMedicineFields;
+
+// UI utilities shared across pages
+window.ui = (function() {
+  function applyFilters(tableId, clearBtnId) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const filterInputs = table.querySelectorAll('.filter-input');
+    const rows = table.querySelectorAll('tbody tr');
+
+    function filterRows() {
+      const filters = {};
+      filterInputs.forEach(input => {
+        const idx = input.dataset.column;
+        const val = input.value.trim().toLowerCase();
+        if (val) filters[idx] = val;
+      });
+      rows.forEach(row => {
+        let show = true;
+        Object.entries(filters).forEach(([colIdx, filterVal]) => {
+          const cell = row.cells[colIdx];
+          if (cell && !cell.textContent.toLowerCase().includes(filterVal)) {
+            show = false;
+          }
+        });
+        row.style.display = show ? '' : 'none';
+      });
+    }
+
+    filterInputs.forEach(input => {
+      const eventType = (input.type === 'date' || input.tagName.toLowerCase() === 'select') ? 'change' : 'input';
+      input.addEventListener(eventType, filterRows);
+    });
+
+    const clearBtn = document.getElementById(clearBtnId);
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        filterInputs.forEach(input => (input.value = ''));
+        filterRows();
+      });
+    }
+
+    // initial pass
+    filterRows();
+  }
+
+  return {
+    applyFilters
+  };
+})();
+
+// Shared calculations utilities for rows and totals
+window.calc = (function() {
+  function toFloat(val) { var num = parseFloat(val); return isNaN(num) ? 0 : num; }
+
+  function calcRow(index, container = document) {
+    const qtyEl = container.querySelector(`[name="items-${index}-quantity"]`);
+    if (!qtyEl) return; // no row
+    let qty = toFloat(qtyEl.value);
+    let rate = toFloat(container.querySelector(`[name="items-${index}-rate"]`)?.value);
+    let sgst = toFloat(container.querySelector(`[name="items-${index}-sgst_percent"]`)?.value);
+    let cgst = toFloat(container.querySelector(`[name="items-${index}-cgst_percent"]`)?.value);
+    let amountInput = container.querySelector(`[name="items-${index}-amount"]`);
+    if (amountInput && (!amountInput.dataset.locked || amountInput.value.trim() === "")) {
+      let base = qty * rate;
+      let gst_sgst = base * sgst / 100;
+      let gst_cgst = base * cgst / 100;
+      let amount = base + gst_sgst + gst_cgst;
+      amountInput.value = amount > 0 ? amount.toFixed(2) : "";
+    }
+
+    // sale rate calculation if applicable
+    let mrp = toFloat(container.querySelector(`[name="items-${index}-mrp"]`)?.value);
+    let saleDiscountEl = container.querySelector(`[name="items-${index}-sale_discount_percent"]`) || container.querySelector(`[name="items-${index}-discount_percent"]`);
+    let saleDiscount = toFloat(saleDiscountEl?.value);
+    let saleRateInput = container.querySelector(`[name="items-${index}-sale_rate"]`);
+    if (saleRateInput && saleDiscount > 0) {
+      let sRate = mrp - (mrp * saleDiscount / 100);
+      saleRateInput.value = sRate.toFixed(2);
+    }
+  }
+
+  function recalcAll(container = document) {
+    const rows = container.querySelectorAll('[name^="items-"][name$="-quantity"]');
+    let total_mrp = 0, total_actual = 0;
+    rows.forEach((qtyInput, idx) => {
+      calcRow(idx, container);
+      let mrp = toFloat(container.querySelector(`[name="items-${idx}-mrp"]`)?.value);
+      let sgst = toFloat(container.querySelector(`[name="items-${idx}-sgst_percent"]`)?.value);
+      let cgst = toFloat(container.querySelector(`[name="items-${idx}-cgst_percent"]`)?.value);
+      let qty = toFloat(qtyInput.value);
+      let amount = toFloat(container.querySelector(`[name="items-${idx}-amount"]`)?.value);
+      let item_mrp_total = (mrp * qty) + ((mrp*qty)*sgst/100) + ((mrp*qty)*cgst/100);
+      total_mrp += item_mrp_total;
+      total_actual += amount;
+    });
+
+    // try commonly named grand inputs
+    const mrpInput = container.querySelector('[name="grand_total_mrp"]');
+    const actualInput = container.querySelector('[name="grand_total_actual"]') || container.querySelector('[name="grand_total"]');
+    const savingsInput = container.querySelector('[name="savings_total"]');
+    if (mrpInput && (!mrpInput.dataset.locked || mrpInput.value.trim() === "")) mrpInput.value = total_mrp > 0 ? total_mrp.toFixed(2) : "";
+    if (actualInput && (!actualInput.dataset.locked || actualInput.value.trim() === "")) actualInput.value = total_actual > 0 ? total_actual.toFixed(2) : "";
+    if (savingsInput && (!savingsInput.dataset.locked || savingsInput.value.trim() === "")) savingsInput.value = (total_mrp - total_actual > 0) ? (total_mrp - total_actual).toFixed(2) : "";
+  }
+
+  function attachRowListeners(idx, container = document) {
+    // support both discount field names used across templates
+    ['quantity','rate','sgst_percent','cgst_percent','sale_discount_percent','discount_percent','mrp'].forEach(field => {
+      const el = container.querySelector(`[name="items-${idx}-${field}"]`);
+      if (el) el.addEventListener('input', function(){ calcRow(idx, container); recalcAll(container); });
+    });
+    const amount = container.querySelector(`[name="items-${idx}-amount"]`);
+    if (amount) amount.addEventListener('input', function(){ amount.dataset.locked = (amount.value.trim() !== ''); recalcAll(container); });
+  }
+
+  function attachTotalListeners(container = document) {
+    const mrpInput = container.querySelector('[name="grand_total_mrp"]');
+    const actualInput = container.querySelector('[name="grand_total_actual"]') || container.querySelector('[name="grand_total"]');
+    const savingsInput = container.querySelector('[name="savings_total"]');
+    function handleMrp(){ if (!mrpInput) return; mrpInput.dataset.locked = (mrpInput.value.trim() !== ''); if (!savingsInput?.dataset.locked) { let v = toFloat(mrpInput.value) - toFloat(actualInput?.value); if (savingsInput) savingsInput.value = v>0? v.toFixed(2):''; } }
+    function handleActual(){ if (!actualInput) return; actualInput.dataset.locked = (actualInput.value.trim() !== ''); if (!savingsInput?.dataset.locked) { let v = toFloat(mrpInput?.value) - toFloat(actualInput.value); if (savingsInput) savingsInput.value = v>0? v.toFixed(2):''; } }
+    function handleSavings(){ if (!savingsInput) return; savingsInput.dataset.locked = (savingsInput.value.trim() !== ''); if (!actualInput?.dataset.locked) { let v = toFloat(mrpInput?.value) - toFloat(savingsInput.value); if (actualInput) actualInput.value = v>0? v.toFixed(2):''; } }
+    if (mrpInput) mrpInput.addEventListener('input', handleMrp);
+    if (actualInput) actualInput.addEventListener('input', handleActual);
+    if (savingsInput) savingsInput.addEventListener('input', handleSavings);
+  }
+
+  return {
+    toFloat, calcRow, recalcAll, attachRowListeners, attachTotalListeners
+  };
+})();
+    </script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
