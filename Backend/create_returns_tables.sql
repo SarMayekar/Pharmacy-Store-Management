@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS sales_return_items (
     sgst_percent DECIMAL(5,2),
     cgst_percent DECIMAL(5,2),
     discount_percent DECIMAL(5,2) DEFAULT 0,
+        -- packing column removed to keep original schema
     FOREIGN KEY (sales_return_id) REFERENCES sales_returns(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES medicines(id) ON DELETE RESTRICT
 );
@@ -38,6 +39,7 @@ CREATE TABLE IF NOT EXISTS purchase_returns (
     return_datetime DATETIME NOT NULL,
     total_amount DECIMAL(10,2) NOT NULL,
     discount_value DECIMAL(10,2) DEFAULT 0,
+    -- discount_percent column removed to keep original schema
     gst_value DECIMAL(10,2) DEFAULT 0,
     remarks TEXT,
     FOREIGN KEY (distributor_id) REFERENCES distributors(id) ON DELETE SET NULL
@@ -57,7 +59,7 @@ CREATE TABLE IF NOT EXISTS purchase_return_items (
     mrp DECIMAL(10,2),
     sgst_percent DECIMAL(5,2),
     cgst_percent DECIMAL(5,2),
-    discount_percent DECIMAL(5,2) DEFAULT 0,
+    -- packing and free columns removed to keep original schema
     FOREIGN KEY (purchase_return_id) REFERENCES purchase_returns(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES medicines(id) ON DELETE RESTRICT
 );

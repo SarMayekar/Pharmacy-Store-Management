@@ -1,51 +1,241 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Bill - Invoice #{{ sale.invoice_no }}</h2>
-<p><strong>Date:</strong> {{ sale.sale_datetime }}</p>
-<p><strong>Patient:</strong> {{ sale.patient_name or 'N/A' }}</p>
-<p><strong>Doctor:</strong> {{ sale.doctor_name or 'N/A' }}</p>
 
-<table class="table table-bordered mt-3" id="bill-table">
-  <thead>
-    <tr>
-      <th>Sr No</th>
-      <th>Item</th>
-      <th>Batch</th>
-      <th>Expiry</th>
-      <th>HSN</th>
-      <th>MRP</th>
-      <th>Qty</th>
-      <th>Rate</th>
-      <th>SGST %</th>
-      <th>CGST %</th>
-      <th>Discount %</th>
-      <th>Amount</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for item in items %}
-    <tr>
-      <td>{{ loop.index }}</td>
-      <td>{{ item.name }}</td>
-      <td>{{ item.batch_no or '' }}</td>
-      <td>{{ item.expiry_date or '' }}</td>
-      <td>{{ item.hsn_code or '' }}</td>
-      <td>{{ "%.2f"|format(item.mrp or 0) }}</td>
-      <td>{{ item.quantity }}</td>
-      <td>{{ "%.2f"|format(item.rate or 0) }}</td>
-      <td>{{ "%.2f"|format(item.sgst_percent or 0) }}</td>
-      <td>{{ "%.2f"|format(item.cgst_percent or 0) }}</td>
-      <td>{{ "%.2f"|format(item.discount_percent or 0) }}</td>
-      <td>{{ "%.2f"|format(item.amount or 0) }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<style>
+  /* A4 Half Landscape (wider) — single-page invoice tweaks */
+  :root { --page-w:297mm; --page-h:148mm; }
+  @page { size: 297mm 148mm; margin: 3mm; }
 
-<p><strong>MRP Total: Rs {{ "%.2f"|format(mrp_total or 0) }}</strong></p>
-<p><strong>Total Amount: Rs {{ "%.2f"|format(sale.total_amount or 0) }}</strong></p>
-<p><strong>Savings: Rs {{ "%.2f"|format(savings or 0) }}</strong></p>
+  body { font-family: Arial, Helvetica, sans-serif; font-size:10px; line-height:1.1; margin:0; }
+  .invoice-wrap { width:100%; max-width:var(--page-w); height:140mm; overflow:hidden; box-sizing:border-box; padding:4px; border:1px solid #000; display:flex; flex-direction:column; background:#fff; position:relative; }
 
-<button onclick="window.print()" class="btn btn-primary mt-3">Print / Download</button>
+  /* Header - top 20% (~28mm) */
+  .invoice-header { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; padding:2px; flex:0 0 28mm; }
+  .hdr-left { width:50%; }
+  .hdr-right { width:50%; text-align:right; font-size:10px; }
+  .shop-name { font-weight:700; font-size:16px; margin:0 0 2px 0; }
+  .hdr-left .shop-name { text-align:center; }
+  .shop-line { font-size:10px; margin:0; }
+  .hdr-right div { margin:0; padding:0; }
+  /* GST INVOICE badge inside right column, centered */
+  .gst-invoice { display:inline-block; margin-top:6px; font-weight:700; text-decoration:underline; font-size:14px; padding:2px 4px; border-radius:2px; background:transparent; }
+  .hdr-right .gst-wrap { display:flex; justify-content:center; }
+  /* Header right rows: keep label and value on same line; allow value to wrap only when it exceeds available width */
+  .hdr-right .hdr-row { display:flex; justify-content:flex-end; gap:6px; align-items:flex-start; flex-wrap:wrap; margin-bottom:2px; line-height:1.35; }
+  .hdr-right .hdr-row strong { flex:0 0 auto; margin-left:0; }
+  .hdr-right .hdr-row .value { flex:1 1 auto; min-width:0; text-align:right; white-space:normal; overflow-wrap:break-word; }
+  /* Ensure long patient/doctor names wrap within the right header box */
+  .hdr-right .patient-name, .hdr-right .doctor-name { display:block; white-space:normal; overflow-wrap:break-word; word-break:break-word; }
+
+  /* Product table area - keep fixed content box but reduce vertical spacing */
+  .invoice-header { margin-bottom:0; padding-bottom:2mm; }
+  .invoice-body, .product-table { flex:0 0 75mm; height:75mm; overflow:hidden; margin-top:0mm; }
+  .table-wrap { border-bottom:2px solid #000; }
+  table.items-table { width:100%; border-collapse:collapse; font-size:9px; table-layout:auto; }
+  table.items-table thead th, table.items-table tbody td { border:1px solid #000; padding:2px; vertical-align:middle; word-wrap:break-word; }
+  table.items-table thead th { font-weight:700; text-align:left; }
+  table.items-table td.numeric, table.items-table th.numeric { text-align:right; }
+  /* Uniform grid: fixed row height, tighter spacing */
+  table.items-table tbody tr { height:24px; }
+  /* Empty/filler rows match the grid height */
+  table.items-table tbody tr.empty-row td { color:transparent; height:24px; padding:2px; }
+  /* Cell spacing and borders */
+  table.items-table td { padding:2px; line-height:1.2; border:1px solid #000; }
+  table.items-table thead th { border:1px solid #000; }
+
+  /* Zebra striping for a pre-printed invoice look */
+  table.items-table tbody tr:nth-child(even) td { background-color:#f9f9f9; }
+
+  /* Ensure printed colors are preserved for zebra */
+  @media print { -webkit-print-color-adjust: exact; color-adjust: exact; }
+
+  /* Grand total emphasis */
+  table.right-summary tr.grand-total td { font-weight:700; font-size:11px; background:#f3f3f3; }
+
+  /* Reduce footer gap: remove extra bottom padding and tighten spacing */
+  .table-wrap { border-bottom:2px solid #000; padding-bottom:0; }
+  .invoice-footer { margin-top:0; }
+
+  /* Footer - bottom area */
+  .invoice-footer { flex:0 0 37mm; display:flex; gap:6px; align-items:flex-start; margin-top:2px; }
+  .footer-left { width:60%; }
+  .footer-right { width:38%; }
+
+  table.left-summary, table.right-summary { width:100%; border-collapse:collapse; font-size:8px; }
+  table.left-summary th, table.left-summary td, table.right-summary th, table.right-summary td { border:1px solid #000; padding:2px; }
+  table.left-summary th, table.right-summary th { font-weight:700; }
+
+  .amount-words { font-size:8px; margin-top:4px; }
+  .terms { font-size:7.5px; margin-top:4px; }
+  .you-saved { font-size:13px; font-weight:800; color:#b00000; margin-top:6px; }
+
+  /* Signatory - placed in footer-right */
+  .sign { position:static; text-align:right; font-size:7.5px; margin-top:6px; }
+
+  /* Hide UI elements in print */
+  .no-print, .navbar { display:block; }
+  @media print { .no-print, .navbar { display:none !important; } }
+
+  /* Prevent page breaks inside invoice */
+  .invoice-wrap { page-break-inside:avoid; }
+
+</style>
+
+<div class="invoice-wrap">
+  <div class="invoice-header">
+    <div class="hdr-left">
+      <div class="shop-name">ASTITVA DRUG HOUSE</div>
+      <div class="shop-line">5, Shree Jivdani Darshan Chs, Old Viva College Road, Virar W, Palghar - 401303</div>
+      <div class="shop-line">Mob: 7821835602 | astitvadrughouse@gmail.com</div>
+      <div class="shop-line">DL: MH-PL1-20-614279 &amp; MH-PL1-21-614280</div>
+      <div class="shop-line">GSTIN: 27AQMPM1395G1ZI</div>
+    </div>
+
+    <div class="hdr-right">
+      <div class="hdr-row"><strong>Invoice #</strong><div class="value">{{ sale.invoice_no or '-' }}</div></div>
+      <div class="hdr-row"><strong>Date</strong><div class="value">{{ sale.date or sale.sale_datetime or '-' }}</div></div>
+      <div class="hdr-row"><strong>Patient</strong><div class="value">{{ sale.patient_name or '-' }}{% if sale.patient_mobile %} ({{ sale.patient_mobile }}){% endif %}</div></div>
+      <div class="hdr-row"><strong>Doctor</strong><div class="value">{{ sale.doctor_name or '-' }}{% if sale.doctor_mobile %} ({{ sale.doctor_mobile }}){% endif %}</div></div>
+      <div class="gst-wrap"><span class="gst-invoice">GST INVOICE</span></div>
+    </div>
+  </div>
+
+  <div class="invoice-body">
+    <div class="table-wrap">
+      <table class="items-table" role="table" aria-label="Invoice items">
+      <colgroup>
+        <col style="width:5%">
+        <col style="width:18%">
+        <col style="width:10%">
+        <col style="width:10%">
+        <col style="width:12%">
+        <col style="width:5%">
+        <col style="width:10%">
+        <col style="width:10%">
+        <col style="width:10%">
+        <col style="width:10%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>SN</th>
+          <th>Item</th>
+          <th>Batch</th>
+          <th>Exp</th>
+          <th>HSN</th>
+          <th class="numeric">Qty</th>
+          <th class="numeric">MRP</th>
+          <th class="numeric">Rate</th>
+          <th class="numeric">GST%</th>
+          <th class="numeric">Gross</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        {% set qty = (item.quantity|float(0)) %}
+        {% set rate = (item.price|default(item.rate)|float(0)) %}
+        {% set mrp = (item.mrp|float(0)) %}
+        {% set sgst_p = (item.sgst_percent|float(0)) %}
+        {% set cgst_p = (item.cgst_percent|float(0)) %}
+        {% set gst_p = (sgst_p + cgst_p) %}
+        {% set gross = (rate * qty) %}
+        <tr>
+          <td class="sn">{{ loop.index }}</td>
+          <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ item.name or '' }}</td>
+          <td>{{ item.batch_no or '' }}</td>
+          <td>{{ item.expiry_date or '' }}</td>
+          <td>{{ item.hsn_code or '' }}</td>
+          <td class="numeric">{{ qty|int }}</td>
+          <td class="numeric">{{ "%.2f"|format(mrp) }}</td>
+          <td class="numeric">{{ "%.2f"|format(rate) }}</td>
+          <td class="numeric">{{ gst_p|float|round(2) }}%</td>
+          <td class="numeric">{{ "%.2f"|format(gross) }}</td>
+        </tr>
+        {% endfor %}
+
+        {% set filler = (10 - (items|length)) if (items|length) < 10 else 0 %}
+        {% for i in range(filler) %}
+        <tr class="empty-row">
+          <td>&nbsp;</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="invoice-footer">
+    <div class="footer-left">
+      <table class="left-summary">
+        <thead>
+          <tr>
+            <th>CLASS</th>
+            <th>TOTAL</th>
+            <th>SCH.</th>
+            <th>DISC.</th>
+            <th>SGST</th>
+            <th>CGST</th>
+            <th>TOTAL GST</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cls in [5,12,'other'] %}
+          {% set bucket = gst_summary[cls] if cls in gst_summary else gst_summary['other'] %}
+          <tr>
+            <td>{{ (cls == 'other') and 'Other' or (cls|string + '%') }}</td>
+            <td class="numeric">{{ "%.2f"|format(bucket.gross|float(0)) }}</td>
+            <td class="numeric">0.00</td>
+            <td class="numeric">0.00</td>
+            <td class="numeric">{{ "%.2f"|format(bucket.total_gst|float(0) / 2) }}</td>
+            <td class="numeric">{{ "%.2f"|format(bucket.total_gst|float(0) / 2) }}</td>
+            <td class="numeric">{{ "%.2f"|format(bucket.total_gst|float(0)) }}</td>
+          </tr>
+          {% endfor %}
+          <tr style="font-weight:700;">
+            <td>Total</td>
+            <td class="numeric">{{ "%.2f"|format(gst_summary['total'].gross|float(0)) }}</td>
+            <td class="numeric">0.00</td>
+            <td class="numeric">0.00</td>
+            <td class="numeric">{{ "%.2f"|format(gst_summary['total'].total_gst|float(0) / 2) }}</td>
+            <td class="numeric">{{ "%.2f"|format(gst_summary['total'].total_gst|float(0) / 2) }}</td>
+            <td class="numeric">{{ "%.2f"|format(gst_summary['total'].total_gst|float(0)) }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="you-saved">You Saved: <strong>Rs {{ "%.2f"|format(sale.savings|float(0)) }}</strong></div>
+      <div class="terms">Terms: Goods once sold will not be taken back. E. &amp; O.E.</div>
+    </div>
+
+    <div class="footer-right">
+      <table class="right-summary">
+        <tbody>
+          <tr><th>MRP Total</th><td class="numeric">Rs {{ "%.2f"|format(sale.mrp_total|float(0)) }}</td></tr>
+          <tr><th>Sub Total</th><td class="numeric">Rs {{ "%.2f"|format(sale.sub_total|float(0)) }}</td></tr>
+          <tr><th>SGST Pay</th><td class="numeric">Rs {{ "%.2f"|format(gst_summary['total'].sgst|float(0)) }}</td></tr>
+          <tr><th>CGST Pay</th><td class="numeric">Rs {{ "%.2f"|format(gst_summary['total'].cgst|float(0)) }}</td></tr>
+          <tr class="grand-total"><th>Grand Total</th><td class="numeric">Rs {{ "%.2f"|format(sale.total_amount|float(0)) }}</td></tr>
+        </tbody>
+      </table>
+      <div class="sign">For Astitva Drug House<br><br>Authorized Signatory</div>
+    </div>
+  </div>
+
+  <div class="sign">For Astitva Drug House<br><br>Authorized Signatory</div>
+</div>
+
+<div class="no-print" style="text-align:center; margin-top:6px;"><button onclick="window.print()" style="font-size:10px;padding:4px 8px;">Print / Download</button></div>
 
 {% endblock %}
+
+<!-- PyInstaller truncation buffer -->
+
+<!-- PyInstaller truncation buffer -->

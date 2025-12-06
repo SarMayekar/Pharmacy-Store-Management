@@ -1,0 +1,121 @@
+
+---- 2025-12-06T06:40:09.347864 ----
+{
+  "items-0-expiry_date": [
+    "2025-12-06"
+  ],
+  "items-0-batch_no": [
+    "B1"
+  ],
+  "savepurchase": [
+    "1"
+  ],
+  "items-0-quantity": [
+    "1"
+  ],
+  "items-1-free": [
+    "0"
+  ],
+  "items-0-free": [
+    "0"
+  ],
+  "distributor_contact": [
+    "9999999999"
+  ],
+  "purchase_date": [
+    "2025-12-06"
+  ],
+  "items-1-product": [
+    "DebugMed2"
+  ],
+  "items-0-discount_percent": [
+    "0"
+  ],
+  "items-1-packing": [
+    "P"
+  ],
+  "items-1-sale_rate": [
+    "30"
+  ],
+  "items-0-product": [
+    "DebugMed1"
+  ],
+  "items-0-sale_discount_percent": [
+    "0"
+  ],
+  "items-1-rate": [
+    "5"
+  ],
+  "items-0-sgst_percent": [
+    "0"
+  ],
+  "items-1-cgst_percent": [
+    "0"
+  ],
+  "items-0-mrp": [
+    "10"
+  ],
+  "items-0-rate": [
+    "10"
+  ],
+  "items-1-sale_discount_percent": [
+    "0"
+  ],
+  "items-1-amount": [
+    "10"
+  ],
+  "items-1-mrp": [
+    "20"
+  ],
+  "items-1-quantity": [
+    "2"
+  ],
+  "items-0-sale_rate": [
+    "20"
+  ],
+  "items-1-discount_percent": [
+    "0"
+  ],
+  "distributor_name": [
+    "UnitTest Distributor"
+  ],
+  "rowcount": [
+    "2"
+  ],
+  "items-1-hsn_code": [
+    ""
+  ],
+  "items-0-packing": [
+    "P"
+  ],
+  "items-1-batch_no": [
+    "B2"
+  ],
+  "trade_type": [
+    "Retail"
+  ],
+  "items-0-cgst_percent": [
+    "0"
+  ],
+  "items-1-expiry_date": [
+    "2025-12-06"
+  ],
+  "items-0-hsn_code": [
+    ""
+  ],
+  "discount_percent": [
+    "0"
+  ],
+  "items-0-amount": [
+    "10"
+  ],
+  "grand_total": [
+    "123.45"
+  ],
+  "items-1-sgst_percent": [
+    "0"
+  ],
+  "invoice_no": [
+    "TEST20251206064008"
+  ]
+}

@@ -1,22 +1,19 @@
-# Task: Add Sales Returns and Purchase Returns
+# Purchase Edit and Detail View Fix
 
-## Status: COMPLETED - All Testing Passed
+## Summary
+Fixed issue where purchase edit and purchase detail views only showed one row instead of all rows with filled fields, similar to sales edit.
 
-### Completed Implementation:
-- ✅ Returns.html template with sales and purchase returns forms, history tables, filters, view/delete buttons
-- ✅ Backend routes: /returns, /sales-returns, /purchase-returns with full CRUD operations
-- ✅ Database schema: sales_returns, purchase_returns tables and items tables
-- ✅ Inventory logic: Stock increases on sales returns, decreases on purchase returns
-- ✅ Navigation: "Returns" link in navbar
-- ✅ Forms match counterparts (sales.html, purchases.html) with similar logic and validations
+## Changes Made
+- [x] Updated `startedit_id` query in `purchases_view` to use LEFT JOIN and COALESCE for deleted medicines
+- [x] Updated `showdetail_id` query in `purchases_view` to use LEFT JOIN and COALESCE for deleted medicines
+- [x] Updated `purchase_detail_view` function to use LEFT JOIN and COALESCE for deleted medicines
+- [x] Ran tests to verify functionality
 
-### Testing Status:
-- ✅ Flask app started successfully on http://127.0.0.1:5000
-- ✅ Automated test script created (Backend/test_returns.py)
-- ✅ Database schema verification: Tables created with correct columns and foreign keys
-- ✅ Sales returns inventory update: Stock increases correctly (PASS)
-- ✅ Purchase returns inventory update: Stock decreases correctly (PASS)
-- ✅ Foreign key constraints handled: NULL values for optional patient/distributor IDs
+## Testing
+- [x] test_view_purchase.py passed
+- [x] test_edit_purchase.py passed
+- [x] test_add_purchase.py passed
+- [x] Started application server for manual testing
 
-### Task Completion:
-The returns functionality is fully implemented and tested per the task requirements. All inventory updates work correctly, autofill functionality has been added matching the rest of the application, and the system is ready for production use.
+## Result
+Purchase edit and detail views now show all rows, including items where the medicine has been deleted (displayed as "Deleted Product").

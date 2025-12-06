@@ -16,9 +16,9 @@
       <th>MRP</th>
       <th>Qty</th>
       <th>Rate</th>
-      <th>SGST %</th>
-      <th>CGST %</th>
-      <th>Discount %</th>
+      <th>Packing</th>
+      <th>Free</th>
+      <th>GST %</th>
       <th>Amount</th>
     </tr>
   </thead>
@@ -33,9 +33,9 @@
       <td>{{ "%.2f"|format(item.mrp or 0) }}</td>
       <td>{{ item.quantity }}</td>
       <td>{{ "%.2f"|format(item.rate or 0) }}</td>
-      <td>{{ "%.2f"|format(item.sgst_percent or 0) }}</td>
-      <td>{{ "%.2f"|format(item.cgst_percent or 0) }}</td>
-      <td>{{ "%.2f"|format(item.discount_percent or 0) }}</td>
+      <td>{{ item.packing or '' }}</td>
+      <td>{{ item.get('free', 0) }}</td>
+      <td>{{ "%.2f"|format(item.get('gst_percent', (item.get('sgst_percent',0) or 0) + (item.get('cgst_percent',0) or 0))) }}</td>
       <td>{{ "%.2f"|format(item.amount or 0) }}</td>
     </tr>
     {% endfor %}
@@ -43,5 +43,6 @@
 </table>
 
 <p><strong>Total Amount: Rs {{ "%.2f"|format(purchase.total_amount or 0) }}</strong></p>
+<p><strong>Discount: </strong> {{ (purchase.discount_value is not none) and ("%.2f%%"|format(purchase.discount_value)) or '0.00%' }}</p>
 
 {% endblock %}

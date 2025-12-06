@@ -4,6 +4,7 @@
 <p><strong>Date:</strong> {{ purchase_return.return_date }}</p>
 <p><strong>Distributor:</strong> {{ purchase_return.distributor_name or 'N/A' }}</p>
 <p><strong>Trade Type:</strong> {{ purchase_return.trade_type or 'N/A' }}</p>
+<p><strong>Discount %:</strong> {{ "%.2f"|format(purchase_return.get('discount_value', 0) or 0) }}</p>
 
 <table class="table table-bordered mt-3" id="purchase-return-bill-table">
   <thead>
@@ -16,8 +17,9 @@
       <th>MRP</th>
       <th>Qty</th>
       <th>Rate</th>
-      <th>SGST %</th>
-      <th>CGST %</th>
+      <th>Packing</th>
+      <th>Free</th>
+      <th>GST %</th>
       <th>Discount %</th>
       <th>Amount</th>
     </tr>
@@ -33,8 +35,9 @@
       <td>{{ "%.2f"|format(item.mrp or 0) }}</td>
       <td>{{ item.quantity }}</td>
       <td>{{ "%.2f"|format(item.rate or 0) }}</td>
-      <td>{{ "%.2f"|format(item.sgst_percent or 0) }}</td>
-      <td>{{ "%.2f"|format(item.cgst_percent or 0) }}</td>
+      <td>{{ item.packing or '' }}</td>
+      <td>{{ item.get('free', 0) }}</td>
+      <td>{{ "%.2f"|format((item.get('sgst_percent', 0) or 0) + (item.get('cgst_percent', 0) or 0)) }}</td>
       <td>{{ "%.2f"|format(item.discount_percent or 0) }}</td>
       <td>{{ "%.2f"|format(item.amount or 0) }}</td>
     </tr>

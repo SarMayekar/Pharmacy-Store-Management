@@ -1,0 +1,9 @@
+# PowerShell commands to forcefully delete build, dist folders and *.spec files
+Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\build\
+Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .\dist\
+Remove-Item -Force -ErrorAction SilentlyContinue .\*.spec
+
+# CMD commands to forcefully delete build, dist folders and *.spec files
+rmdir /s /q build
+rmdir /s /q dist
+del /f /q *.spec

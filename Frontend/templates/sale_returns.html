@@ -1,135 +1,156 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-2">
-  <h2 class="mb-0">Sales Returns</h2>
-  <div>
-    <a href="/returns" class="btn btn-outline-secondary me-2">Back to Returns</a>
-    <a href="/sales" class="btn btn-outline-primary">Open Sales</a>
-  </div>
-</div>
+<h2>Sales Returns</h2>
 
-<form method="post" action="/sales-returns" id="sales-returns-form" class="mb-4">
-  <!-- Invoice No -->
+<form method="post" class="mb-4">
+  <input type="hidden" name="rowcount" value="{{ sales_rowcount }}">
+  {% if edit_sale_return_id %}
+  <input type="hidden" name="edit_sale_return_id" value="{{ edit_sale_return_id }}">
+  {% endif %}
+
   <label class="form-label mt-2">Return Invoice No.</label>
-  <input type="text" name="invoice_no" class="form-control mb-2" value="{{ sales_return_invoice_no or '' }}" placeholder="Auto-generated, editable">
+  <input type="text" name="invoice_no" class="form-control mb-2" value="{{ sales_return_invoice_no or '' }}" readonly>
 
-  <!-- Return Date -->
-  <label class="form-label">Return Date</label>
-  <input type="date" name="return_date" class="form-control mb-2" value="{{ sales_return_date or '' }}">
+  <label class="form-label">Date</label>
+  <input type="date" name="return_date" class="form-control mb-2" value="{{ sales_return_date or '' }}" required>
 
-  <!-- Patient Name -->
   <label class="form-label mt-2">Patient Name</label>
-  <input type="text" name="patient_name" id="patient_name_sales" list="patient_list" placeholder="Start typing or add new..." required
-         class="form-control mb-2" value="{{ sales_patient_name or '' }}">
+  <input type="text" name="patient_name" list="patient_list" placeholder="Start typing or add new..." required
+         class="form-control mb-2" value="{{ patient_name or '' }}">
   <datalist id="patient_list">
     {% for patient in patients %}
     <option value="{{ patient.name }}">
     {% endfor %}
   </datalist>
 
-  <!-- Items table -->
+  <!-- Patient Contact Number -->
+  <label class="form-label">Patient Contact Number</label>
+  <input type="text" name="patient_contact" id="patient_contact" placeholder="Optional" class="form-control mb-3" value="{{ patient_contact or '' }}">
+
+  <hr>
   <h4>Returned Items</h4>
   <div class="table-responsive">
-    <table class="table table-bordered align-middle text-center" id="sales-returns-items-table">
+    <table class="table table-bordered align-middle text-center">
       <thead>
         <tr>
           <th>Action</th>
           <th>Product</th>
+          <th>Packing</th>
           <th>Batch</th>
           <th>Expiry</th>
           <th>HSN</th>
           <th>MRP</th>
-          <th>Qty Returned</th>
+          <th>Qty</th>
           <th>Rate</th>
-          <th>SGST %</th>
-          <th>CGST %</th>
+          <th>Discount %</th>
+          <th>GST %</th>
           <th>Amount</th>
         </tr>
       </thead>
       <tbody>
-        {% for i in range(sales_rowcount) %}
+      {% for i in range(sales_rowcount) %}
         <tr>
           <td>
             <button type="submit" name="delrow" value="{{ i }}" class="btn btn-sm btn-danger" title="Delete row">×</button>
           </td>
           <td>
-            <input type="text" name="items-{{ i }}-product" id="items-{{ i }}-product-sales" list="medicine_list" placeholder="Type/select medicine" class="form-control"
-                   value="{{ sales_items[i]['product'] if sales_items|length > i else '' }}">
+            <input type="text" name="items-{{ i }}-product" id="items-{{ i }}-product" list="medicine_list" placeholder="Type/select medicine" class="form-control"
+                   value="{{ (sales_items[i] and sales_items[i]['product']) or (items[i] and items[i]['product']) or '' }}">
           </td>
           <td>
-            <input type="text" name="items-{{ i }}-batch_no" id="items-{{ i }}-batch_no-sales" class="form-control" placeholder="Batch"
-                   value="{{ sales_items[i]['batch_no'] if sales_items|length > i else '' }}">
+            <input type="text" name="items-{{ i }}-packing" id="items-{{ i }}-packing" class="form-control" placeholder="Packing"
+                   value="{{ sales_return_items[i]['packing'] if sales_return_items|length > i else '' }}">
           </td>
           <td>
-            <input type="date" name="items-{{ i }}-expiry_date" id="items-{{ i }}-expiry_date-sales" class="form-control"
-                   value="{{ sales_items[i]['expiry_date'] if sales_items|length > i else '' }}">
+            <input type="text" name="items-{{ i }}-batch_no" id="items-{{ i }}-batch_no" class="form-control" placeholder="Batch"
+                   value="{{ (sales_items[i] and sales_items[i]['batch_no']) or (items[i] and items[i]['batch_no']) or '' }}">
           </td>
           <td>
-            <input type="text" name="items-{{ i }}-hsn_code" id="items-{{ i }}-hsn_code-sales" class="form-control" placeholder="HSN"
-                   value="{{ sales_items[i]['hsn_code'] if sales_items|length > i else '' }}">
+            <input type="date" name="items-{{ i }}-expiry_date" id="items-{{ i }}-expiry_date" class="form-control"
+                   value="{{ (sales_items[i] and sales_items[i]['expiry_date']) or (items[i] and items[i]['expiry_date']) or '' }}">
           </td>
           <td>
-            <input type="number" step="0.01" min="0" name="items-{{ i }}-mrp" id="items-{{ i }}-mrp-sales" class="form-control" placeholder="MRP"
-                   value="{{ sales_items[i]['mrp'] if sales_items|length > i else '' }}">
+            <input type="text" name="items-{{ i }}-hsn_code" id="items-{{ i }}-hsn_code" class="form-control" placeholder="HSN"
+                   value="{{ (sales_items[i] and sales_items[i]['hsn_code']) or (items[i] and items[i]['hsn_code']) or '' }}">
+          </td>
+          <td>
+            <input type="number" step="0.01" min="0" name="items-{{ i }}-mrp" id="items-{{ i }}-mrp" class="form-control" placeholder="MRP"
+                   value="{{ (sales_items[i] and sales_items[i]['mrp']) or (items[i] and items[i]['mrp']) or '' }}">
           </td>
           <td>
             <input type="number" step="1" min="0" name="items-{{ i }}-quantity" class="form-control" placeholder="Qty"
-                   value="{{ sales_items[i]['quantity'] if sales_items|length > i else '' }}">
+                   value="{{ (sales_items[i] and sales_items[i]['quantity']) or (items[i] and items[i]['quantity']) or '' }}">
           </td>
           <td>
             <input type="number" step="0.01" min="0" name="items-{{ i }}-rate" class="form-control" placeholder="Rate"
-                   value="{{ sales_items[i]['rate'] if sales_items|length > i else '' }}">
+                   value="{{ (sales_items[i] and sales_items[i]['rate']) or (items[i] and items[i]['rate']) or '' }}">
           </td>
           <td>
-            <input type="number" step="0.01" min="0" max="100" name="items-{{ i }}-sgst_percent" id="items-{{ i }}-sgst_percent-sales" class="form-control" placeholder="SGST%"
-                   value="{{ sales_items[i]['sgst_percent'] if sales_items|length > i else '' }}">
+            <input type="number" step="0.01" min="0" max="100" name="items-{{ i }}-discount_percent" class="form-control" placeholder="Discount%"
+                   value="{{ (items[i] and items[i]['discount_percent']) or '' }}">
           </td>
           <td>
-            <input type="number" step="0.01" min="0" max="100" name="items-{{ i }}-cgst_percent" id="items-{{ i }}-cgst_percent-sales" class="form-control" placeholder="CGST%"
-                   value="{{ sales_items[i]['cgst_percent'] if sales_items|length > i else '' }}">
+            <input type="number" step="0.01" min="0" max="100" name="items-{{ i }}-gst_percent" id="items-{{ i }}-gst_percent" class="form-control" placeholder="GST%"
+                   value="{{ ((items[i].sgst_percent|default(0)|float) + (items[i].cgst_percent|default(0)|float)) if items and items[i] else '' }}">
           </td>
+          <input type="hidden" name="items-{{ i }}-sgst_percent" id="items-{{ i }}-sgst_percent" value="{{ items[i]['sgst_percent'] if items|length > i else '' }}">
+          <input type="hidden" name="items-{{ i }}-cgst_percent" id="items-{{ i }}-cgst_percent" value="{{ items[i]['cgst_percent'] if items|length > i else '' }}">
           <td>
             <input type="number" step="0.01" min="0" name="items-{{ i }}-amount" class="form-control" placeholder="Amount"
-                   value="{{ sales_items[i]['amount'] if sales_items|length > i else '' }}">
+                   value="{{ (sales_items[i] and sales_items[i]['amount']) or (items[i] and items[i]['amount']) or '' }}">
           </td>
         </tr>
-        {% endfor %}
+      {% endfor %}
       </tbody>
     </table>
   </div>
   <button type="submit" name="addrow" value="1" class="btn btn-secondary mb-3">Add Row</button>
 
   <div class="row mb-3">
-    <div class="col-md-4 text-end">
+    <div class="col-md-6 text-end">
       <label class="form-label"><b>MRP Total</b></label>
       <input type="number" step="0.01" min="0" name="grand_total_mrp" class="form-control d-inline-block" style="width:200px"
              value="{{ sales_grand_total_mrp if sales_grand_total_mrp else '' }}">
     </div>
-    <div class="col-md-4 text-end">
+    <div class="col-md-6 text-end">
       <label class="form-label"><b>Grand Total</b></label>
       <input type="number" step="0.01" min="0" name="grand_total_actual" class="form-control d-inline-block" style="width:200px"
              value="{{ sales_grand_total_actual if sales_grand_total_actual else '' }}">
     </div>
-    <div class="col-md-4 text-end">
-      <label class="form-label"><b>Savings (MRP Total - Grand Total)</b></label>
-      <input type="number" step="0.01" min="0" name="savings_total" class="form-control d-inline-block" style="width:200px"
-             value="{{ sales_savings_total if sales_savings_total else '' }}">
-    </div>
-  </div>
-  <button type="submit" name="savesalesreturn" value="1" class="btn btn-primary mb-3">Save Sales Return</button>
+  </div>  <script>
+  function validateForm() {
+    const patient = document.querySelector('[name="patient_name"]').value.trim();
+    const returnDate = document.querySelector('[name="return_date"]').value.trim();
+    if (!patient) { alert('Patient Name is required'); return false; }
+    if (!returnDate) { alert('Return date is required'); return false; }
+    const rowcount = parseInt(document.querySelector('[name="rowcount"]').value || '0');
+    let hasOneItem = false;
+    for (let i=0;i<rowcount;i++) if (document.querySelector(`[name="items-${i}-product"]`).value.trim()) { hasOneItem = true; break; }
+    if (!hasOneItem) { alert('At least one returned item is required'); return false; }
+    return true;
+  }
+  </script>
+  <button type="submit" name="savesalesreturn" value="1" class="btn btn-primary mb-3" onclick="return validateForm()">Save Sales Return</button>
 </form>
+
+<datalist id="medicine_list">
+  {% for med in medicines %}
+  <option value="{{ med.name }}" label="{{ med.name }} ({{ med.batch_no }}, {{ med.expiry_date }})">
+  {% endfor %}
+</datalist>
 
 <!-- Sales Returns History Table -->
 <h4>Sales Returns History</h4>
 <table class="table table-bordered table-striped text-center" id="sales-returns-history-table">
   <thead>
     <tr>
-      <th>Return Invoice ID</th>
+      <th>Invoice ID</th>
       <th>Patient Name</th>
       <th>Date</th>
       <th>No. of Items</th>
       <th>Amount Total</th>
-      <th>View</th>
+      <th>Edit</th>
+      <th>Print/View</th>
       <th>Delete</th>
     </tr>
     <tr class="filter-row">
@@ -139,7 +160,8 @@
       <th><input type="number" class="form-control filter-input" data-column="3" placeholder="Filter No. of Items"></th>
       <th><input type="number" step="0.01" class="form-control filter-input" data-column="4" placeholder="Filter Amount Total"></th>
       <th></th>
-      <th><button id="clear-sales-returns-filters" class="btn btn-sm btn-secondary" title="Clear Filters">×</button></th>
+      <th></th>
+      <th><button id="clear-filters" class="btn btn-sm btn-secondary" title="Clear Filters">×</button></th>
     </tr>
   </thead>
   <tbody>
@@ -151,98 +173,67 @@
       <td>{{ ret.item_count }}</td>
       <td>{{ "%.2f"|format(ret.total_amount) }}</td>
       <td>
-        <a href="/sales-return/{{ ret.id }}" class="btn btn-sm btn-primary">View</a>
+        <form method="post" class="d-inline">
+          <input type="hidden" name="startedit_salesreturn_id" value="{{ ret.id }}">
+          <button type="submit" class="btn btn-sm btn-warning">Edit</button>
+        </form>
+      </td>
+      <td>
+        <a href="/sales-return/{{ ret.id }}" class="btn btn-sm btn-primary">Print/View</a>
       </td>
       <td>
         <form method="post" class="d-inline" onsubmit="return confirm('Delete this sales return?');">
           <input type="hidden" name="delsalesreturn_id" value="{{ ret.id }}">
-          <button class="btn btn-sm btn-danger">Delete</button>
+          <button type="submit" class="btn btn-sm btn-danger">Delete</button>
         </form>
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="7" class="text-muted">No sales returns yet.</td></tr>
+    <tr><td colspan="8" class="text-muted">No sales returns yet.</td></tr>
     {% endfor %}
   </tbody>
 </table>
 
-<datalist id="medicine_list">
-  {% for med in medicines %}
-  <option value="{{ med.name }}">
-  {% endfor %}
-</datalist>
-
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-  // Use shared filter utility
-  (function(){
-    function run() { if (window.ui && window.ui.applyFilters) window.ui.applyFilters("sales-returns-history-table", "clear-sales-returns-filters"); }
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
-  })();
-
-  // Autofill for patient name (sales returns)
-  document.getElementById('patient_name_sales').addEventListener('input', function() {
-    const patientName = this.value.trim();
-    if (patientName) {
-      window.autofill.fetchPatient(patientName).then(data => {
-        // Fill patient contact if the page has a contact field with id 'patient_contact_sales'
-        window.autofill.fillContact('patient_contact_sales', data);
-      }).catch(error => console.error('Error fetching patient data:', error));
+document.addEventListener("DOMContentLoaded", function () {
+    // Initialize filters for the history table
+    if (window.ui && window.ui.applyFilters) {
+        window.ui.applyFilters('sales-returns-history-table', 'clear-filters');
+    } else if (window.applyFilters) { // Fallback for older structure
+        window.applyFilters('sales-returns-history-table', 'clear-filters');
     }
-  });
+    // Initialize autofill and calculations for the form
+    if (window.ui && window.ui.initializePage) {
+        window.ui.initializePage(document.querySelector('form'));
+    }
 
-  // Autofill for medicine details (sales returns)
-  document.addEventListener('input', function(event) {
-    if (event.target.matches('[id^="items-"][id$="-product-sales"]')) {
-      const productInput = event.target;
-      const rowIndex = productInput.id.match(/items-(\d+)-product-sales/)[1];
-      const medicineName = productInput.value.trim();
-      if (medicineName) {
-                window.autofill.fetchMedicine(medicineName)
-          .then(response => response.json())
-          .then(data => {
-            if (data.length > 0) {
-              if (data.length === 1) {
-                window.fillMedicineFields(rowIndex, data[0]);
-              } else {
-                // Multiple batches -> replace input with select
-                const batchInput = document.getElementById(`items-${rowIndex}-batch_no-sales`);
-                const select = document.createElement('select');
-                select.id = batchInput.id;
-                select.name = batchInput.name;
-                select.className = batchInput.className;
-                select.innerHTML = '<option value="">Select Batch</option>' +
-                  data.map(med => `<option value="${med.batch_no}" data-med='${JSON.stringify(med)}'>${med.batch_no} (Expiry: ${med.expiry_date})</option>`).join('');
-                batchInput.parentNode.replaceChild(select, batchInput);
-                const firstMed = data[0];
-                select.value = firstMed.batch_no;
-                window.fillMedicineFields(rowIndex, firstMed);
-                select.addEventListener('change', function() {
-                  const selectedOption = this.options[this.selectedIndex];
-                    if (selectedOption.value) {
-                    const med = JSON.parse(selectedOption.getAttribute('data-med'));
-                    window.fillMedicineFields(rowIndex, med);
-                  }
-                });
-              }
-            }
-          })
-                .catch(error => console.error('Error fetching medicine data:', error));
+    // Attach listeners and run initial calculation
+    const rows = document.querySelectorAll('[name^="items-"][name$="-quantity"]');
+    if (window.calc && window.calc.attachRowListeners) {
+        for (let i = 0; i < rows.length; i++) {
+            window.calc.attachRowListeners(i, document);
+        }
+        window.calc.attachTotalListeners(document);
+        window.calc.recalcAll(document);
+    }
+
+    // When a per-row combined GST% is changed, split into SGST/CGST halves
+    function bindRowGstSplit() {
+      const rowcount = parseInt(document.querySelector('[name="rowcount"]').value || '0');
+      for (let i=0;i<rowcount;i++) {
+        const gstEl = document.querySelector(`[name="items-${i}-gst_percent"]`);
+        if (!gstEl) continue;
+        gstEl.addEventListener('input', function(){
+          if (window.calc && window.calc.splitGst) {
+            window.calc.splitGst(i, document);
+            window.calc.calcRow(i, document);
+            window.calc.recalcAll(document);
+          }
+        });
       }
     }
-  });
-
-  // Re-run calculations handled by shared calc utilities on autofill
-  document.addEventListener('autofill:medicine', function(e) {
-    try { const idx = e.detail.rowIndex; window.calc.calcRow(idx, document); window.calc.recalcAll(document); } catch (err) {}
-  });
-
-  // Use shared calculation utilities for sales returns and initialize
-  const initialRows = document.querySelectorAll('[name^="items-"][name$="-quantity"]');
-  for (let i = 0; i < initialRows.length; i++) window.calc.attachRowListeners(i, document);
-  window.calc.attachTotalListeners(document);
-  window.calc.recalcAll(document);
+    bindRowGstSplit();
 });
 </script>
+
 {% endblock %}
-{# forcing build refresh #}

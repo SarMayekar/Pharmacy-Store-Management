@@ -1,0 +1,24 @@
+
+--- Processing item 0 at 2025-12-06T06:56:27.396776 ---
+{"product": "X1", "batch_no": "B1", "expiry_date": "2025-12-06", "hsn_code": "", "mrp": "10", "quantity": "1", "rate": "10", "sgst_percent": "0", "cgst_percent": "0", "discount_percent": "0", "amount": "10", "sale_rate": "", "sale_discount_percent": ""}
+
+--- Processing item 1 at 2025-12-06T06:56:27.401104 ---
+{"product": "X2", "batch_no": "B2", "expiry_date": "2025-12-06", "hsn_code": "", "mrp": "6", "quantity": "2", "rate": "6", "sgst_percent": "0", "cgst_percent": "0", "discount_percent": "0", "amount": "12", "sale_rate": "", "sale_discount_percent": ""}
+
+--- Processing item 0 at 2025-12-06T06:58:47.015063 ---
+{"product": "glycomet", "batch_no": "xyz", "expiry_date": "2025-11-30", "hsn_code": "345", "mrp": "50.00", "quantity": "5", "rate": "20.00", "sgst_percent": "", "cgst_percent": "", "discount_percent": "", "amount": "105.00", "sale_rate": "45.00", "sale_discount_percent": ""}
+
+--- Processing item 1 at 2025-12-06T06:58:47.021119 ---
+{"product": "huggies", "batch_no": "TEST001", "expiry_date": "2025-12-31", "hsn_code": "HSN001", "mrp": "10.00", "quantity": "2", "rate": "8.00", "sgst_percent": "", "cgst_percent": "", "discount_percent": "", "amount": "16.80", "sale_rate": "0.00", "sale_discount_percent": ""}
+
+--- Processing item 0 at 2025-12-06T07:15:46.534996 ---
+{"product": "glycomet", "batch_no": "xyz", "expiry_date": "2025-11-30", "hsn_code": "345", "mrp": "50.00", "quantity": "5", "rate": "20.00", "sgst_percent": 2.5, "cgst_percent": 2.5, "discount_percent": "", "amount": "105.00", "sale_rate": "45.00", "sale_discount_percent": "0.00"}
+
+--- Processing item 1 at 2025-12-06T07:15:46.542575 ---
+{"product": "huggies", "batch_no": "TEST001", "expiry_date": "2025-12-31", "hsn_code": "HSN001", "mrp": "10.00", "quantity": "2", "rate": "8.00", "sgst_percent": 2.5, "cgst_percent": 2.5, "discount_percent": "", "amount": "16.80", "sale_rate": "0.00", "sale_discount_percent": "0.00"}
+
+--- Processing item 0 at 2025-12-06T07:20:37.956819 ---
+{"product": "glycomet", "batch_no": "xyz", "expiry_date": "2025-11-30", "hsn_code": "345", "mrp": "50.00", "quantity": "5", "rate": "20.00", "sgst_percent": 2.5, "cgst_percent": 2.5, "discount_percent": "", "amount": "105.00", "sale_rate": "45.00", "sale_discount_percent": "0.00"}
+
+--- Processing item 1 at 2025-12-06T07:20:37.960738 ---
+{"product": "huggies", "batch_no": "TEST001", "expiry_date": "2025-12-31", "hsn_code": "HSN001", "mrp": "10.00", "quantity": "2", "rate": "8.00", "sgst_percent": 2.5, "cgst_percent": 2.5, "discount_percent": "", "amount": "16.80", "sale_rate": "0.00", "sale_discount_percent": "0.00"}

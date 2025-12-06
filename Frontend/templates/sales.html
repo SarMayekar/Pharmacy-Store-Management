@@ -3,6 +3,10 @@
 <h2>Sales/Billing</h2>
 
 <form method="post" class="mb-4">
+  <input type="hidden" name="rowcount" value="{{ rowcount }}">
+  {% if edit_sale_id %}
+  <input type="hidden" name="edit_sale_id" value="{{ edit_sale_id }}">
+  {% endif %}
 
   <!-- Invoice (readonly, auto-generated) -->
   <label class="form-label mt-2">Invoice No.</label>
@@ -48,6 +52,7 @@
         <tr>
           <th>Action</th>
           <th>Product</th>
+          <th>Packing</th>
           <th>Batch</th>
           <th>Expiry</th>
           <th>HSN</th>
@@ -55,8 +60,7 @@
           <th>Qty</th>
           <th>Discount %</th>
           <th>Rate</th>
-          <th>SGST %</th>
-          <th>CGST %</th>
+          <th>GST %</th>
           <th>Amount</th>
         </tr>
       </thead>
@@ -69,6 +73,10 @@
           <td>
             <input type="text" name="items-{{ i }}-product" id="items-{{ i }}-product" list="medicine_list" placeholder="Type/select medicine" class="form-control"
                    value="{{ items[i]['product'] if items|length > i else '' }}">
+          </td>
+          <td>
+            <input type="text" name="items-{{ i }}-packing" class="form-control" placeholder="Packing"
+                   value="{{ items[i]['packing'] if items|length > i else '' }}">
           </td>
           <td>
             <input type="text" name="items-{{ i }}-batch_no" id="items-{{ i }}-batch_no" class="form-control" placeholder="Batch"
@@ -99,12 +107,8 @@
                    value="{{ items[i]['rate'] if items|length > i else '' }}">
           </td>
           <td>
-            <input type="number" step="0.01" min="0" max="100" name="items-{{ i }}-sgst_percent" id="items-{{ i }}-sgst_percent" class="form-control" placeholder="SGST%"
-                   value="{{ items[i]['sgst_percent'] if items|length > i else '' }}">
-          </td>
-          <td>
-            <input type="number" step="0.01" min="0" max="100" name="items-{{ i }}-cgst_percent" id="items-{{ i }}-cgst_percent" class="form-control" placeholder="CGST%"
-                   value="{{ items[i]['cgst_percent'] if items|length > i else '' }}">
+            <input type="number" step="0.01" min="0" max="100" name="items-{{ i }}-gst_percent" id="items-{{ i }}-gst_percent" class="form-control" placeholder="GST%"
+                   value="{{ (items[i]['sgst_percent']|default(0)|float + items[i]['cgst_percent']|default(0)|float) if items|length > i else '' }}">
           </td>
           <td>
             <input type="number" step="0.01" min="0" name="items-{{ i }}-amount" class="form-control" placeholder="Amount"
@@ -139,7 +143,7 @@
 
 <datalist id="medicine_list">
   {% for med in medicines %}
-  <option value="{{ med.name }}">
+  <option value="{{ med.name }}" label="{{ med.name }} ({{ med.batch_no }}, {{ med.expiry_date }})">
   {% endfor %}
 </datalist>
 
@@ -153,6 +157,7 @@
       <th>Date</th>
       <th>No. of Items</th>
       <th>Amount Total</th>
+      <th>Edit</th>
       <th>Print/View</th>
       <th>Delete</th>
     </tr>
@@ -162,6 +167,7 @@
       <th><input type="date" class="form-control filter-input" data-column="2"></th>
       <th><input type="number" class="form-control filter-input" data-column="3" placeholder="Filter No. of Items"></th>
       <th><input type="number" step="0.01" class="form-control filter-input" data-column="4" placeholder="Filter Amount Total"></th>
+      <th></th>
       <th></th>
       <th><button id="clear-filters" class="btn btn-sm btn-secondary" title="Clear Filters">×</button></th>
     </tr>
@@ -175,6 +181,12 @@
       <td>{{ sale.item_count }}</td>
       <td>{{ "%.2f"|format(sale.total_amount) }}</td>
       <td>
+        <form method="post" class="d-inline">
+          <input type="hidden" name="startedit_sale_id" value="{{ sale.id }}">
+          <button class="btn btn-sm btn-warning">Edit</button>
+        </form>
+      </td>
+      <td>
         <a href="/bill/{{ sale.id }}" class="btn btn-sm btn-primary">Print/View</a>
       </td>
       <td>
@@ -185,7 +197,7 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="7" class="text-muted">No sales yet.</td></tr>
+    <tr><td colspan="8" class="text-muted">No sales yet.</td></tr>
     {% endfor %}
   </tbody>
 </table>
@@ -226,57 +238,13 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-
-    function toFloat(val) {
-        var num = parseFloat(val);
-        return isNaN(num) ? 0 : num;
+    // Initialize filters for the history table
+    if (window.ui && window.ui.applyFilters) {
+        window.ui.applyFilters('sales-history-table', 'clear-filters');
     }
-
-    function validateForm() {
-        let patientName = document.querySelector('[name="patient_name"]').value.trim();
-        if (!patientName) {
-            alert("Warning: Patient name is required.");
-            return false;
-        }
-
-        let rows = document.querySelectorAll('[name^="items-"][name$="-quantity"]');
-        if (rows.length === 0) {
-            alert("Warning: At least one item is required.");
-            return false;
-        }
-
-        let validItems = 0;
-        for (let i = 0; i < rows.length; i++) {
-            let product = document.querySelector(`[name="items-${i}-product"]`).value.trim();
-            let qty = document.querySelector(`[name="items-${i}-quantity"]`).value.trim();
-            let rate = document.querySelector(`[name="items-${i}-rate"]`).value.trim();
-
-            if (product && qty && rate) {
-                let qtyVal = toFloat(qty);
-                let rateVal = toFloat(rate);
-                if (qtyVal <= 0 || rateVal <= 0) {
-                    alert(`Warning: Item ${i+1}: Quantity and rate must be positive.`);
-                    return false;
-                }
-                validItems++;
-            } else if (product || qty || rate) {
-                alert(`Warning: Item ${i+1}: Incomplete item data.`);
-                return false;
-            }
-        }
-
-        if (validItems === 0) {
-            alert("Warning: At least one complete item is required.");
-            return false;
-        }
-
-        let grandTotal = document.querySelector('[name="grand_total_actual"]').value.trim();
-        if (!grandTotal) {
-            alert("Warning: Grand total is required.");
-            return false;
-        }
-
-        return true;
+    // Initialize autofill and calculations for the form
+    if (window.ui && window.ui.initializePage) {
+        window.ui.initializePage(document.querySelector('form'));
     }
 
     // rely on shared calculation utilities for total field listeners
@@ -306,51 +274,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // Autofill for medicine details
-    document.addEventListener('input', function(event) {
-        if (event.target.matches('[id^="items-"][id$="-product"]')) {
-            const productInput = event.target;
-            const rowIndex = productInput.id.match(/items-(\d+)-product/)[1];
-            const medicineName = productInput.value.trim();
-            if (medicineName) {
-                window.autofill.fetchMedicine(medicineName)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.length > 0) {
-                            if (data.length === 1) {
-                                // Single batch: autofill directly
-                                const med = data[0];
-                                window.fillMedicineFields(rowIndex, med);
-                            } else {
-                                // Multiple batches: replace input with select dropdown
-                                const batchInput = document.getElementById(`items-${rowIndex}-batch_no`);
-                                const select = document.createElement('select');
-                                select.id = batchInput.id;
-                                select.name = batchInput.name;
-                                select.className = batchInput.className;
-                                select.innerHTML = '<option value="">Select Batch</option>' +
-                                    data.map(med => `<option value="${med.batch_no}" data-med='${JSON.stringify(med)}'>${med.batch_no} (Expiry: ${med.expiry_date})</option>`).join('');
-                                batchInput.parentNode.replaceChild(select, batchInput);
-                                // Auto-select first batch and fill fields
-                                const firstMed = data[0];
-                                select.value = firstMed.batch_no;
-                                window.fillMedicineFields(rowIndex, firstMed);
-                                // Add event listener for batch selection
-                                select.addEventListener('change', function() {
-                                    const selectedOption = this.options[this.selectedIndex];
-                                    if (selectedOption.value) {
-                                        const med = JSON.parse(selectedOption.getAttribute('data-med'));
-                                        window.fillMedicineFields(rowIndex, med);
-                                    }
-                                });
-                            }
-                        }
-                    })
-                    .catch(error => console.error('Error fetching medicine data:', error));
-            }
-        }
-    });
-
     // fillMedicineFields is provided by the shared autofill.js (window.fillMedicineFields)
 
     // Also recalc on page changes (optional, e.g. after adding rows via POST)
@@ -361,7 +284,11 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
-if (window.ui && window.ui.applyFilters) window.ui.applyFilters('sales-history-table','clear-filters');
 </script>
+
+<!-- Shared JS for calculations and autofill -->
+<script src="{{ url_for('static', filename='js/autofill.js') }}"></script>
+<script src="{{ url_for('static', filename='js/calculations.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ui-utils.js') }}"></script>
 
 {% endblock %}

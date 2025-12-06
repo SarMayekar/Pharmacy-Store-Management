@@ -46,13 +46,21 @@ window.autofill = (function() {
   }
 
   function fillMedicineFields(rowIndex, med) {
-    // Fill generic fields (batch, expiry, hsn, mrp, gst fields)
+    // Fill generic fields (batch, expiry, hsn, mrp, packing, gst fields)
+    setFirstExisting(rowIndex, 'packing', med.packing);
     setFirstExisting(rowIndex, 'batch_no', med.batch_no);
     setFirstExisting(rowIndex, 'expiry_date', med.expiry_date);
     setFirstExisting(rowIndex, 'hsn_code', med.hsn_code);
     setFirstExisting(rowIndex, 'mrp', med.mrp);
     setFirstExisting(rowIndex, 'sgst_percent', med.sgst_percent);
     setFirstExisting(rowIndex, 'cgst_percent', med.cgst_percent);
+
+    // Also update the combined GST field if it exists
+    const gstEl = document.getElementById(`items-${rowIndex}-gst_percent}`) || document.querySelector(`[name="items-${rowIndex}-gst_percent"]`);
+    if (gstEl) {
+        const totalGst = (parseFloat(med.sgst_percent) || 0) + (parseFloat(med.cgst_percent) || 0);
+        if (!isNaN(totalGst)) gstEl.value = totalGst.toFixed(2);
+    }
 
     // Fill sale_rate if a dedicated sale_rate field exists
     if (med.sale_rate !== undefined) {
@@ -71,7 +79,7 @@ window.autofill = (function() {
         if (med.purchase_rate !== undefined && med.purchase_rate !== null) rateEl.value = med.purchase_rate;
         else if (med.sale_rate !== undefined && med.sale_rate !== null) rateEl.value = med.sale_rate;
       } else {
-        // No dedicated sale_rate field — treat `rate` as sale rate first
+        // No dedicated sale_rate field — treat `rate` as the sale rate first
         if (med.sale_rate !== undefined && med.sale_rate !== null) rateEl.value = med.sale_rate;
         else if (med.purchase_rate !== undefined && med.purchase_rate !== null) rateEl.value = med.purchase_rate;
       }
@@ -195,15 +203,17 @@ window.calc = (function() {
     if (!qtyEl) return; // no row
     let qty = toFloat(qtyEl.value);
     let rate = toFloat(container.querySelector(`[name="items-${index}-rate"]`)?.value);
-    let sgst = toFloat(container.querySelector(`[name="items-${index}-sgst_percent"]`)?.value);
-    let cgst = toFloat(container.querySelector(`[name="items-${index}-cgst_percent"]`)?.value);
+    let discount_percent = toFloat(container.querySelector(`[name="items-${index}-discount_percent"]`)?.value) || 0;
+    let sgst_percent = toFloat(container.querySelector(`[name="items-${index}-sgst_percent"]`)?.value) || 0;
+    let cgst_percent = toFloat(container.querySelector(`[name="items-${index}-cgst_percent"]`)?.value) || 0;
     let amountInput = container.querySelector(`[name="items-${index}-amount"]`);
     if (amountInput && (!amountInput.dataset.locked || amountInput.value.trim() === "")) {
-      let base = qty * rate;
-      let gst_sgst = base * sgst / 100;
-      let gst_cgst = base * cgst / 100;
-      let amount = base + gst_sgst + gst_cgst;
-      amountInput.value = amount > 0 ? amount.toFixed(2) : "";
+      let base_total = qty * rate;
+      let discount_amt = base_total * (discount_percent / 100);
+      let discounted_total = base_total - discount_amt;
+      let gst_amt = discounted_total * ((sgst_percent + cgst_percent) / 100);
+      let row_final_amount = discounted_total + gst_amt;
+      amountInput.value = row_final_amount > 0 ? row_final_amount.toFixed(2) : "";
     }
 
     // sale rate calculation if applicable
@@ -218,16 +228,16 @@ window.calc = (function() {
   }
 
   function recalcAll(container = document) {
+    const form = container.closest('form');
+    const isSales = form && form.action.includes('sales');
     const rows = container.querySelectorAll('[name^="items-"][name$="-quantity"]');
     let total_mrp = 0, total_actual = 0;
     rows.forEach((qtyInput, idx) => {
       calcRow(idx, container);
       let mrp = toFloat(container.querySelector(`[name="items-${idx}-mrp"]`)?.value);
-      let sgst = toFloat(container.querySelector(`[name="items-${idx}-sgst_percent"]`)?.value);
-      let cgst = toFloat(container.querySelector(`[name="items-${idx}-cgst_percent"]`)?.value);
       let qty = toFloat(qtyInput.value);
       let amount = toFloat(container.querySelector(`[name="items-${idx}-amount"]`)?.value);
-      let item_mrp_total = (mrp * qty) + ((mrp*qty)*sgst/100) + ((mrp*qty)*cgst/100);
+      let item_mrp_total = mrp * qty; // GST ignored in math engine
       total_mrp += item_mrp_total;
       total_actual += amount;
     });
@@ -268,6 +278,8 @@ window.calc = (function() {
   };
 })();
     </script>
+    <script src="/static/js/calculations.js?v=2"></script>
+    <script src="/static/js/ui-utils.js"></script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
